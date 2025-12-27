@@ -10,7 +10,7 @@ import { zones } from "./layout/zones";
 
 export default function App() {
   // -----------------------------
-  // 中心点の計算（あなたの式）
+  // 盤面のグリッド（中心点計算）
   // -----------------------------
   const grid = createGrid({ rows: 4, cols: 5 });
 
@@ -29,7 +29,7 @@ export default function App() {
       {zones.map((z) => {
         const rect = rectFromPoints({
           orientation: z.orientation,
-          points: z.points,
+          points: z.anchors,
 
           centerXOf: grid.centerXOf,
           centerYOf: grid.centerYOf,
@@ -42,8 +42,8 @@ export default function App() {
 
         return (
           <ZoneFrame
-            key={z.id}
-            title={z.title}
+            key={z.zoneKey}
+            title={z.label}
             centerX={rect.centerX}
             centerY={rect.centerY}
             width={rect.width}

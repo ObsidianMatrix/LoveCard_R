@@ -1,145 +1,78 @@
 import React from "react";
 
-import { Deck } from "../Deck";
-import { Discard } from "../Discard";
-import { EnergyDeck } from "../EnergyDeck";
-import { LiveSuccess } from "../LiveSuccess";
-
-import type { GridPoint, Orientation } from "./types";
+import type { Orientation } from "./types";
+import { zonesLayout, type ZoneKind, type ZoneLayout, type ZoneSlot } from "./zonesLayout";
+import { zoneRenderers } from "./zoneRenderers";
 
 /**
- * 盤面に置く枠の定義
- *
- * points:
- *   - 1点 → カード1枚分の枠
- *   - 複数点 → min〜max の範囲を囲む1つの枠
- *
- * orientation:
- *   - 枠の種類側が「縦/横」を決める
+ * 状態管理にも使える一意キー
+ */
+export type ZoneKey = `${ZoneKind}:${ZoneSlot}`;
+
+/**
+ * zoneKey を作る（状態管理側でも同じルールで作れるように）
+ */
+export function makeZoneKey(kind: ZoneKind, slot: ZoneSlot): ZoneKey {
+  return `${kind}:${slot}`;
+}
+
+/**
+ * 盤面に置く枠の定義（最終的にアプリが使う形）
  */
 export type ZoneDef = {
-  id: string;
-  title: string;
+  zoneKey: ZoneKey;
+  kind: ZoneKind;
+  slot: ZoneSlot;
+
+  /**
+   * ラベルは機械的に作る（デバッグ/表示用）
+   * - single は kind
+   * - それ以外は kind-slot
+   */
+  label: string;
+
   orientation: Orientation;
-  points: GridPoint[];
-  variant: "dashed" | "solid";
+  anchors: ZoneLayout["anchors"];
+  variant: ZoneLayout["variant"];
+
+  /**
+   * 枠の中身（コンポーネント）
+   */
   content: React.ReactNode;
 };
 
 /**
- * zones は「配置表」なので、計算ロジックは一切持たせません
+ * label は完全自動
  */
-export const zones: ZoneDef[] = [
-  {
-    id: "deck",
-    title: "deck",
-    orientation: "portrait",
-    points: [{ row: 0, col: 0 }],
-    variant: "dashed",
-    content: <Deck />,
-  },
+function makeLabel(kind: ZoneKind, slot: ZoneSlot): string {
+  return slot === "single" ? kind : `${kind}-${slot}`;
+}
 
-  {
-    id: "discard-1",
-    title: "discard",
-    orientation: "portrait",
-    points: [{ row: 1, col: 0 }],
-    variant: "solid",
-    content: <Discard />,
-  },
-  {
-    id: "discard-2",
-    title: "discard",
-    orientation: "portrait",
-    points: [{ row: 2, col: 0 }],
-    variant: "solid",
-    content: <Discard />,
-  },
+/**
+ * ZoneLayout から ZoneDef を作る
+ * - slot を補完
+ * - zoneKey を作る
+ * - label を作る
+ * - content は zoneRenderers から作る（if を書かない）
+ */
+function materializeZone(layout: ZoneLayout): ZoneDef {
+  const slot: ZoneSlot = layout.slot ?? "single";
+  const zoneKey = makeZoneKey(layout.kind, slot);
+  const label = makeLabel(layout.kind, slot);
 
-    {
-    id: "discard-3",
-    title: "discard",
-    orientation: "landscape",
-    points: [{ row: 0, col: 1 }],
-    variant: "solid",
-    content: <Discard />,
-  },
-    {
-    id: "discard-3",
-    title: "discard",
-    orientation: "landscape",
-    points: [{ row: 0, col: 2 }],
-    variant: "solid",
-    content: <Discard />,
-  },
-      {
-    id: "discard-3",
-    title: "discard",
-    orientation: "landscape",
-    points: [{ row: 0, col: 3 }],
-    variant: "solid",
-    content: <Discard />,
-  },
+  return {
+    zoneKey,
+    kind: layout.kind,
+    slot,
+    label,
+    orientation: layout.orientation,
+    anchors: layout.anchors,
+    variant: layout.variant,
+    content: zoneRenderers[layout.kind](zoneKey),
+  };
+}
 
-      {
-    id: "discard-3",
-    title: "discard",
-    orientation: "portrait",
-    points: [{ row: 1, col: 1 }],
-    variant: "solid",
-    content: <Discard />,
-  },
-    {
-    id: "discard-3",
-    title: "discard",
-    orientation: "portrait",
-    points: [{ row: 1, col: 2 }],
-    variant: "solid",
-    content: <Discard />,
-  },
-      {
-    id: "discard-3",
-    title: "discard",
-    orientation: "portrait",
-    points: [{ row: 1, col: 3 }],
-    variant: "solid",
-    content: <Discard />,
-  },
-  {
-    id: "energy-range",
-    title: "energy",
-    orientation: "landscape",
-    points: [
-      { row: 0, col: 4 },
-      { row: 1, col: 4 },
-    ],
-    variant: "solid",
-    content: <EnergyDeck />,
-  },
-
-  // (0,1)〜(0,4) を囲む横長の energy 枠
-  {
-    id: "discard-3",
-    title: "discard-3",
-    orientation: "portrait",
-    points: [
-      { row: 2, col: 1 },
-      { row: 2, col: 3 },
-    ],
-    variant: "solid",
-    content: <EnergyDeck />,
-  },
-
-  // 縦方向の範囲例
-  {
-    id: "success",
-    title: "success",
-    orientation: "portrait",
-    points: [
-      { row: 3, col: 0 },
-      { row: 3, col: 3 },
-    ],
-    variant: "dashed",
-    content: <LiveSuccess />,
-  },
-];
+/**
+ * 外に出すのは最終形（ZoneDef）
+ */
+export const zones: ZoneDef[] = zonesLayout.map(materializeZone);

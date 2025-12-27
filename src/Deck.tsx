@@ -2,6 +2,8 @@ import styles from "./ZoneText.module.css";
 
 type DeckProps = {
   // 将来 cards: Card[] を追加予定
+
+  zoneKey: string;
 };
 
 // デッキ領域の中身だけを担当します。

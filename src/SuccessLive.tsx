@@ -1,10 +1,12 @@
 import type { CSSProperties } from "react";
 
-type LiveSuccessProps = {
+type SuccessLiveProps = {
   // 将来 cards: Card[] を追加予定
+
+    zoneKey: string;
 };
 
-export function LiveSuccess(_props: LiveSuccessProps) {
+export function SuccessLive(_props: SuccessLiveProps) {
   const textStyle: CSSProperties = {
     color: "#555",
     textAlign: "center",
@@ -12,6 +14,6 @@ export function LiveSuccess(_props: LiveSuccessProps) {
     userSelect: "none",
   };
 
-  return <div style={textStyle}>ライブ成功エリア1</div>;
+  return <div style={textStyle}>ライブ成功<br/>エリア</div>;
 }
 
