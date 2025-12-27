@@ -1,15 +1,15 @@
 import React from "react";
 
-import { Deck } from "../Deck";
-import { Discard } from "../Discard";
-import { EnergyDeck } from "../EnergyDeck";
-import { Energy } from "../Energy";
-import { Hand } from "../Hand";
-import { Live } from "../Live";
-import { Member } from "../Member";
-import { SuccessLive } from "../SuccessLive";
+import { Deck } from "../../../zone/Deck";
+import { Discard } from "../../../zone/Discard";
+import { EnergyDeck } from "../../../zone/EnergyDeck";
+import { Energy } from "../../../zone/Energy";
+import { Hand } from "../../../zone/Hand";
+import { Live } from "../../../zone/Live";
+import { Member } from "../../../zone/Member";
+import { SuccessLive } from "../../../zone/SuccessLive";
 
-import type { ZoneKind } from "./zonesLayout";
+import type { ZoneKind } from "../model/zonesLayout";
 
 /**
  * ZoneKind（枠の種類）→ 中身を返す関数 の対応表

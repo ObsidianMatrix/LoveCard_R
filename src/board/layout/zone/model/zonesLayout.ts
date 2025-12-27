@@ -1,4 +1,4 @@
-import type { GridPoint, Orientation } from "./types";
+import type { GridPoint, Orientation } from "../../grid/types";
 
 /**
  * 枠の種類（同じ種類は見た目やルールが同じになる想定）

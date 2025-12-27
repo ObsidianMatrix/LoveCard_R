@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import styles from "./ZoneFrame.module.css";
 
-type ZoneFrameProps = {
+type zoneFrameProps = {
   // 枠の中心座標
   centerX: CSSProperties["left"];
   centerY: CSSProperties["top"];
@@ -38,7 +38,7 @@ export function ZoneFrame({
   disabled = false,
   zIndex,
   children,
-}: ZoneFrameProps) {
+}: zoneFrameProps) {
   const style: CSSProperties = {
     left: `calc(${centerX} - (${width} / 2))`,
     top: `calc(${centerY} - (${height} / 2))`,

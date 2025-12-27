@@ -1,4 +1,4 @@
-import type { GridPoint, Orientation, RectDef } from "./types";
+import type { GridPoint, Orientation, RectDef } from "../grid/types";
 
 /**
  * 点の配列から「1つの枠」を作ります
@@ -12,7 +12,7 @@ import type { GridPoint, Orientation, RectDef } from "./types";
  * - 高さ = cardH + stepY * (maxRow - minRow)
  * - 中心 = 両端の中心点の真ん中
  */
-export const rectFromPoints = (args: {
+export const zoneFromPoints = (args: {
   orientation: Orientation;
   points: GridPoint[];
 

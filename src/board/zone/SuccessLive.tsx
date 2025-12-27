@@ -1,8 +1,8 @@
-import styles from "./ZoneText.module.css";
+import styles from "../ui/text.module.css";
 
-type MemberProps = {
+type SuccessLiveProps = {
   /**
-   * この枠を一意に表すキー（例: "member:right"）
+   * この枠を一意に表すキー（例: "SuccessLive:right"）
    * 将来、カード状態を引くときに使います。
    */
   zoneKey: string;
@@ -11,10 +11,10 @@ type MemberProps = {
 };
 
 // メンバー領域の中身だけを担当します。
-export function Member(props: MemberProps) {
+export function SuccessLive(props: SuccessLiveProps) {
   return (
     <div data-zone-key={props.zoneKey} className={styles.text}>
-      メンバー
+      ライブ成功
       <br />
       エリア
     </div>

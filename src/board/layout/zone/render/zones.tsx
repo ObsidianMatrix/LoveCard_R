@@ -1,7 +1,7 @@
 import React from "react";
 
-import type { Orientation } from "./types";
-import { zonesLayout, type ZoneKind, type ZoneLayout, type ZoneSlot } from "./zonesLayout";
+import type { Orientation } from "../../grid/types";
+import { zonesLayout, type ZoneKind, type ZoneLayout, type ZoneSlot } from "../model/zonesLayout";
 import { zoneRenderers } from "./zoneRenderers";
 
 /**

@@ -1,4 +1,4 @@
-import type { Orientation } from "./types";
+import type { Orientation } from "./grid/types";
 
 /**
  * カードの見た目サイズ（固定）をまとめます

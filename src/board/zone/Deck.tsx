@@ -1,4 +1,4 @@
-import styles from "./ZoneText.module.css";
+import styles from "../ui/text.module.css";
 
 type DeckProps = {
   // 将来 cards: Card[] を追加予定
