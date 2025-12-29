@@ -1,4 +1,4 @@
-// src/state/createInitialGameState.ts
+// src/board/state/createInitialGameState.ts
 
 import type { GameState, ZoneKey } from "./GameState";
 
@@ -31,6 +31,7 @@ export function createInitialGameState(): GameState {
   }
 
   return {
+    deckName: null,
     zones,
     cardsById: {},
   };

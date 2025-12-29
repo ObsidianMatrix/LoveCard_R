@@ -43,3 +43,9 @@ export const buttonsLayout = [
     slot: "middle",
   },
 ] as const satisfies ButtonLayout[];
+
+/**
+ * ボタンキーの union 型です（"back" | "import" | ...）。
+ * buttonsLayout から作るので、ボタンを増減しても型が追従します。
+ */
+export type ButtonKey = (typeof buttonsLayout)[number]["buttonKey"];
