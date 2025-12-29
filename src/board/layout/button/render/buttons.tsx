@@ -4,7 +4,7 @@ import type { Orientation } from "../../grid/types";
 import { buttonsLayout, type ButtonLayout } from "../model/buttonsLayout";
 
 import { buttonRenderers } from "./buttonRenders";
-import { buttonActions } from "./buttonActions";
+import { buttonActions } from "../../../button/actions/buttonActions";
 
 /**
  * ButtonLayout の buttonKey から union 型（"back" | ...）を作りたいので

@@ -1,4 +1,4 @@
-import type { ButtonKey } from "./buttons";
+import type { ButtonKey } from "../../layout/button/render/buttons";
 
 /**
  * buttonKey → 操作（クリック処理）を返す
