@@ -4,7 +4,7 @@ import { Phase } from "../../../button/Phase";
 import { Initialize } from "../../../button/Initialize";
 import { Import } from "../../../button/Import";
 import { Statistics } from "../../../button/Statistics";
-import type { ButtonKey } from "./buttons";
+import type { ButtonKey } from "../model/buttonsLayout";
 
 /**
  * buttonKey → 見た目（表示だけ）を返す

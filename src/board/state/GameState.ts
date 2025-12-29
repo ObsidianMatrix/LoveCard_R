@@ -1,4 +1,4 @@
-// src/state/GameState.ts
+// src/board/state/GameState.ts
 
 /**
  * カード1枚を識別するためのIDです。
@@ -8,14 +8,17 @@ export type CardId = string;
 
 /**
  * 盤面上に存在するカード1枚の情報です。
- * まずは最小限だけ定義します。
+ * Importした「デッキの構成」は cardNumber を持つカード実体に展開して扱います。
  */
 export type Card = {
   // このカード固有のID
   id: CardId;
 
-  // カード番号（デッキ入力やマスターJSONと対応させる想定）
-  cardNumber: number;
+  /**
+   * カード番号（例: "PL!SP-bp1-004-R"）
+   * Import JSON もカードマスターもこの形式なので string にします。
+   */
+  cardNumber: string;
 
   // 表向きかどうか
   faceUp: boolean;
@@ -46,6 +49,12 @@ export type ZoneKey =
  * ゲーム全体の状態（＝状態管理の箱）です。
  */
 export type GameState = {
+  /**
+   * デッキ名（ImportしたJSONの name を入れます）
+   * 未Importなら null。
+   */
+  deckName: string | null;
+
   /**
    * 各ゾーンが「どのカードIDを、どの順番で持っているか」
    */

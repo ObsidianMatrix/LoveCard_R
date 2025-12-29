@@ -1,19 +1,13 @@
 import React from "react";
 
 import type { Orientation } from "../../grid/types";
-import { buttonsLayout, type ButtonLayout } from "../model/buttonsLayout";
+import { buttonsLayout, type ButtonLayout, type ButtonKey } from "../model/buttonsLayout";
 
 import { buttonRenderers } from "./buttonRenders";
-import { buttonActions } from "../../../button/actions/buttonActions";
+import type { ButtonActions } from "../../../button/actions/buttonActions";
 
 /**
- * ButtonLayout の buttonKey から union 型（"back" | ...）を作りたいので
- * ここでは ButtonKey を ButtonLayout 由来にします。
- */
-export type ButtonKey = ButtonLayout["buttonKey"];
-
-/**
- * slot の型も ButtonLayout 由来にする
+ * slot の型は ButtonLayout 由来にします。
  */
 export type ButtonSlot = ButtonLayout["slot"];
 
@@ -26,36 +20,39 @@ export type ButtonDef = {
   // デバッグ表示用（必要なら）
   label: string;
 
+  // どっち向きのカードサイズで置くか
   orientation: Orientation;
-  anchors: ButtonLayout["anchors"];
 
-  // ★追加：上/真ん中/下
+  // 置く場所（中心点にするためのアンカー）
+  anchors: { row: number; col: number }[];
+
+  // 上/真ん中/下（同じセルに複数ボタンを置くため）
   slot: ButtonSlot;
 
-  // クリック・無効化
-  disabled?: boolean;
-  onClick?: () => void;
-
-  // 中身（表示）は renderer が作る
+  // 中身（ボタンの見た目）
   content: React.ReactNode;
+
+  // クリックした時の処理
+  onClick: () => void;
 };
 
 /**
- * label は機械的に作る（Zone と同じノリ）
+ * label は機械的に作ります（Zone と同じノリ）
  */
 function makeLabel(buttonKey: ButtonKey): string {
   return buttonKey;
 }
 
 /**
- * ButtonLayout から ButtonDef を作る
+ * ButtonLayout から ButtonDef を作ります。
  * - label を作る
  * - content は buttonRenderers から作る（if を書かない）
- * - onClick は buttonActions から引く（表示と分ける）
+ * - onClick は外から渡された actions から引く（表示と分ける）
  * - slot は layout からそのまま通す
  */
-function materializeButton(layout: ButtonLayout): ButtonDef {
-  const buttonKey: ButtonKey = layout.buttonKey;
+function materializeButton(layout: ButtonLayout, actions: ButtonActions): ButtonDef {
+  // layout.buttonKey は literal なので ButtonKey として扱います
+  const buttonKey: ButtonKey = layout.buttonKey as ButtonKey;
 
   return {
     buttonKey,
@@ -67,11 +64,16 @@ function materializeButton(layout: ButtonLayout): ButtonDef {
     slot: layout.slot,
 
     content: buttonRenderers[buttonKey](buttonKey),
-    onClick: buttonActions[buttonKey],
+    onClick: actions[buttonKey],
   };
 }
 
 /**
- * 外に出すのは最終形（ButtonDef）
+ * ボタン定義を作ります（表示＋クリック処理を合成）
+ *
+ * - render 側は「見た目の作成」だけに寄せたい
+ * - クリック処理は App など上位から注入したい
  */
-export const buttons: ButtonDef[] = buttonsLayout.map(materializeButton);
+export function createButtons(actions: ButtonActions): ButtonDef[] {
+  return buttonsLayout.map((layout) => materializeButton(layout, actions));
+}

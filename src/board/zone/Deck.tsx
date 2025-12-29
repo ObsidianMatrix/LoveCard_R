@@ -1,12 +1,21 @@
 import styles from "../ui/text.module.css";
+import type { Card } from "../../board/state/GameState";
 
 type DeckProps = {
-  // 将来 cards: Card[] を追加予定
-
-  zoneKey: string;
+  // GameState から渡されるデッキのカード一覧
+  cards: Card[];
 };
 
 // デッキ領域の中身だけを担当します。
-export function Deck(_props: DeckProps) {
-  return <div className={styles.text}>デッキ置き場</div>;
+export function Deck(props: DeckProps) {
+  const { cards } = props;
+
+  return (
+    <div className={styles.text}>
+      <div>デッキ置き場</div>
+
+      {/* 枚数表示（GameStateと常に一致） */}
+      <div>枚数: {cards.length}</div>
+    </div>
+  );
 }
