@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import styles from "./ZoneFrame.module.css";
+import styles from "./zoneFrame.module.css";
 
 type zoneFrameProps = {
   // 枠の中心座標

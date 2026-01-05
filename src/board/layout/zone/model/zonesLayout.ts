@@ -17,6 +17,36 @@ export type ZoneKind =
  * 同じ kind の中で「どの場所か」を表す値
  */
 export type ZoneSlot = "left" | "center" | "right" | "single";
+/**
+ * kind と slot を結合した「唯一のゾーン識別子」です。
+ * - 状態管理など、どこでも同じ書式で扱います。
+ */
+export type ZoneKey = `${ZoneKind}:${ZoneSlot}`;
+
+/**
+ * ZoneLayout で slot が省略されたときに「single」を補う小さな関数です。
+ * - 1枠しかないゾーンを明示することで、キー生成時の漏れを防ぎます。
+ */
+export function normalizeZoneSlot(slot?: ZoneSlot): ZoneSlot {
+  return slot ?? "single";
+}
+
+/**
+ * kind と slot から状態管理用の zoneKey を作ります。
+ * - slot が無い場合でも single を補って決定します。
+ */
+export function makeZoneKey(kind: ZoneKind, slot?: ZoneSlot): ZoneKey {
+  const normalizedSlot = normalizeZoneSlot(slot);
+  return `${kind}:${normalizedSlot}`;
+}
+
+/**
+ * ZoneLayout から zoneKey を一貫して取り出すための関数です。
+ * - 配置定義と状態管理キーを常に同期させるために使います。
+ */
+export function zoneKeyFromLayout(layout: ZoneLayout): ZoneKey {
+  return makeZoneKey(layout.kind, layout.slot);
+}
 
 /**
  * zonesLayout では「配置に必要な情報だけ」を持つ
@@ -133,3 +163,9 @@ export const zonesLayout: ZoneLayout[] = [
     variant: "dashed",
   },
 ];
+
+/**
+ * 盤面定義から得られる zoneKey の正式な一覧です。
+ * - ゾーンを増減した際は、ここが自動的に増減します。
+ */
+export const zoneKeys: ZoneKey[] = zonesLayout.map(zoneKeyFromLayout);

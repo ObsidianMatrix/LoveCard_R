@@ -1,27 +1,13 @@
 // src/board/state/createInitialGameState.ts
 
-import type { GameState, ZoneKey } from "./GameState";
+import { zoneKeys } from "../layout/zone/model/zonesLayout";
+import type { GameState } from "./GameState";
 
 /**
  * ゲーム開始時の空の状態を作ります。
  * すべてのゾーンは「カード0枚」から始まります。
  */
 export function createInitialGameState(): GameState {
-  // ゾーン名を配列で定義します
-  const zoneKeys: ZoneKey[] = [
-    "deck",
-    "discard",
-    "live-right",
-    "live-center",
-    "live-left",
-    "member-right",
-    "member-center",
-    "member-left",
-    "hand",
-    "energyDeck",
-    "energy",
-    "successLive",
-  ];
 
   // zones を空配列で初期化します
   const zones = {} as GameState["zones"];

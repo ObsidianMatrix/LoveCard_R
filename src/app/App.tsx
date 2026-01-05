@@ -12,6 +12,7 @@ import { buttonFromPoints } from "../board/layout/button/buttonFromPoints";
 
 import { zones } from "../board/layout/zone/render/zones";
 import { createButtons } from "../board/layout/button/render/buttons";
+import { makeZoneKey } from "../board/layout/zone/model/zonesLayout";
 
 import { createButtonActions } from "../board/button/actions/createButtonActions";
 import { openTextFile } from "../board/button/actions/openJsonFile";
@@ -25,6 +26,8 @@ import { createInitialGameState } from "../board/state/createInitialGameState";
 import { gameReducer } from "../board/state/reducer";
 import { Deck } from "../board/zone/Deck";
 
+// デッキゾーンのキーを一箇所にまとめておきます（状態管理と常に一致させるため）
+const deckZoneKey = makeZoneKey("deck");
 
 
 export default function App() {
@@ -89,7 +92,7 @@ export default function App() {
     onStatistics: () => {
       console.log("action: statistics");
       console.log("deckName:", state.deckName);
-      console.log("deckCount:", state.zones.deck.length);
+      console.log("deckCount:", state.zones[deckZoneKey].length);
     },
   });
 
@@ -103,7 +106,7 @@ export default function App() {
       <div style={{ position: "absolute", top: 8, left: 8, fontSize: 12, color: "#666" }}>
         <p>Vite + React + TypeScript</p>
         <p>deckName: {state.deckName ?? "-"}</p>
-        <p>deckCount: {state.zones.deck.length}</p>
+        <p>deckCount: {state.zones[deckZoneKey].length}</p>
       </div>
 
       {zones.map((z) => {
@@ -120,9 +123,10 @@ export default function App() {
         // -----------------------------
         // deck だけ専用の表示（濃い水色 + 厚み）
         // -----------------------------
-        const deckCards = state.zones.deck.map((id) => state.cardsById[id]);
+        // デッキゾーン内のカードIDをキーから取得します
+        const deckCards = state.zones[deckZoneKey].map((id) => state.cardsById[id]);
 
-        if (String(z.zoneKey).startsWith("deck")) {
+        if (z.zoneKey === deckZoneKey) {
           return (
             <DeckZoneFrame
               key={z.zoneKey}
@@ -132,7 +136,7 @@ export default function App() {
               width={rect.width}
               height={rect.height}
               variant={z.variant}
-              cardCount={state.zones.deck.length}
+              cardCount={state.zones[deckZoneKey].length}
             >
               <Deck cards={deckCards} />
             </DeckZoneFrame>

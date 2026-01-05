@@ -1,20 +1,16 @@
 import React from "react";
 
 import type { Orientation } from "../../grid/types";
-import { zonesLayout, type ZoneKind, type ZoneLayout, type ZoneSlot } from "../model/zonesLayout";
+import {
+  zonesLayout,
+  type ZoneKind,
+  type ZoneLayout,
+  type ZoneSlot,
+  type ZoneKey,
+  normalizeZoneSlot,
+  zoneKeyFromLayout,
+} from "../model/zonesLayout";
 import { zoneRenderers } from "./zoneRenderers";
-
-/**
- * 状態管理にも使える一意キー
- */
-export type ZoneKey = `${ZoneKind}:${ZoneSlot}`;
-
-/**
- * zoneKey を作る（状態管理側でも同じルールで作れるように）
- */
-export function makeZoneKey(kind: ZoneKind, slot: ZoneSlot): ZoneKey {
-  return `${kind}:${slot}`;
-}
 
 /**
  * 盤面に置く枠の定義（最終的にアプリが使う形）
@@ -56,8 +52,10 @@ function makeLabel(kind: ZoneKind, slot: ZoneSlot): string {
  * - content は zoneRenderers から作る（if を書かない）
  */
 function materializeZone(layout: ZoneLayout): ZoneDef {
-  const slot: ZoneSlot = layout.slot ?? "single";
-  const zoneKey = makeZoneKey(layout.kind, slot);
+  // slot が無い場合は single を補って扱います
+  const slot: ZoneSlot = normalizeZoneSlot(layout.slot);
+  // レイアウト定義から公式のキーを作ります
+  const zoneKey = zoneKeyFromLayout(layout);
   const label = makeLabel(layout.kind, slot);
 
   return {

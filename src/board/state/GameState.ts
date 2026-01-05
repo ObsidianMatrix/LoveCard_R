@@ -1,5 +1,5 @@
 // src/board/state/GameState.ts
-
+import type { ZoneKey } from "../layout/zone/model/zonesLayout";
 /**
  * カード1枚を識別するためのIDです。
  * 同じカード番号でも、別の実体として区別するために使います。
@@ -26,24 +26,6 @@ export type Card = {
   // タップ状態（TF）
   tapped: boolean;
 };
-
-/**
- * このゲームで使うゾーン名の一覧です。
- * 今後ゾーンを増減する時は、必ずここを編集します。
- */
-export type ZoneKey =
-  | "deck"
-  | "discard"
-  | "live-right"
-  | "live-center"
-  | "live-left"
-  | "member-right"
-  | "member-center"
-  | "member-left"
-  | "hand"
-  | "energyDeck"
-  | "energy"
-  | "successLive";
 
 /**
  * ゲーム全体の状態（＝状態管理の箱）です。

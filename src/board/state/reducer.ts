@@ -4,6 +4,9 @@ import type { GameState, Card } from "./GameState";
 import type { GameAction } from "./actions";
 import { createInitialGameState } from "./createInitialGameState";
 import { createId } from "./id";
+import { makeZoneKey } from "../layout/zone/model/zonesLayout";
+// デッキゾーンのキーを定数化して、状態管理と書式を合わせます
+const deckZoneKey = makeZoneKey("deck");
 
 /**
  * 状態を更新する中心です。
@@ -53,7 +56,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...next,
         zones: {
           ...next.zones,
-          deck: deckCardIds,
+          // デッキゾーンには定義済みキーを使ってまとめて格納します
+          [deckZoneKey]: deckCardIds,
         },
         cardsById: nextCardsById,
       };
