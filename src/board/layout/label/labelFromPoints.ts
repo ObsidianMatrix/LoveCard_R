@@ -1,3 +1,4 @@
+import { computeRectFromPoints } from "../grid/computeRectFromPoints";
 import type { GridPoint, Orientation, RectDef } from "../grid/types";
 import type { ButtonSlot } from "../button/buttonFromPoints";
 
@@ -44,35 +45,15 @@ export const labelFromPoints = (args: {
     slot,
   } = args;
 
-  // pointsが空でも落ちないようにする（通常は1個以上）
-  const safePoints: GridPoint[] = points.length === 0 ? [{ row: 0, col: 0 }] : points;
-
-  // min/max の範囲を作る
-  const rows = safePoints.map((p) => p.row);
-  const cols = safePoints.map((p) => p.col);
-
-  const minRow = Math.min(...rows);
-  const maxRow = Math.max(...rows);
-  const minCol = Math.min(...cols);
-  const maxCol = Math.max(...cols);
-
-  // カード枠の中心X（両端の中心の中点）
-  const minColCenterX = centerXOf(minCol);
-  const maxColCenterX = centerXOf(maxCol);
-  const centerX = `calc((${minColCenterX} + ${maxColCenterX}) / 2)`;
-
-  // カード枠の中心Y（両端の中心の中点）
-  const minRowCenterY = centerYOf(minRow);
-  const maxRowCenterY = centerYOf(maxRow);
-  const cardRectCenterY = `calc((${minRowCenterY} + ${maxRowCenterY}) / 2)`;
-
-  // カードの基本サイズ（1枚分）
-  const { w: cardW, h: cardH } = sizeByOrientation(orientation);
-
-  // anchors範囲の「カード枠」サイズ
-  const colSpan = maxCol - minCol;
-  const rowSpan = maxRow - minRow;
-
+  // 共通ヘルパーで中心やスパンをまとめ、ラベル独自のサイズ計算に集中する
+  const { centerX, centerY: cardRectCenterY, cardW, cardH, colSpan, rowSpan } = computeRectFromPoints({
+    orientation,
+    points,
+    centerXOf,
+    centerYOf,
+    sizeByOrientation,
+  });
+  // anchors 範囲を反映した枠サイズを、スパンと step を用いて導出する
   const cardRectW = `calc(${cardW} + (${stepX} * ${colSpan}))`;
   const cardRectH = `calc(${cardH} + (${stepY} * ${rowSpan}))`;
 

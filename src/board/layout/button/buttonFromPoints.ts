@@ -1,3 +1,4 @@
+import { computeRectFromPoints } from "../grid/computeRectFromPoints";
 import type { GridPoint, Orientation, RectDef } from "../grid/types";
 
 /**
@@ -27,68 +28,26 @@ export const buttonFromPoints = (args: {
   // ボタンを置く位置
   slot?: ButtonSlot;
 }): RectDef => {
-  const {
+  const { orientation, points, centerXOf, centerYOf, stepY, sizeByOrientation, heightRatio = 0.25, slot = "top" } = args;
+
+  // 共通ヘルパーで中心やスパンを集約し、ボタン独自の高さ計算に専念する
+  const { centerX, centerY: cardRectCenterY, cardH, rowSpan } = computeRectFromPoints({
     orientation,
     points,
     centerXOf,
     centerYOf,
-    stepY,
     sizeByOrientation,
-    heightRatio = 0.25,
-    slot = "top",
-  } = args;
-
-  // --------------------------------
-  // points が空でも動くようにする
-  // --------------------------------
-  const safePoints: GridPoint[] =
-    points.length === 0 ? [{ row: 0, col: 0 }] : points;
-
-  // --------------------------------
-  // 行・列の最小値と最大値を求める
-  // --------------------------------
-  const rows = safePoints.map((p) => p.row);
-  const cols = safePoints.map((p) => p.col);
-
-  const minRow = Math.min(...rows);
-  const maxRow = Math.max(...rows);
-  const minCol = Math.min(...cols);
-  const maxCol = Math.max(...cols);
-
-  // --------------------------------
-  // X方向の中心（左右端の平均）
-  // --------------------------------
-  const centerX = `calc((${centerXOf(minCol)} + ${centerXOf(maxCol)}) / 2)`;
-
-  // --------------------------------
-  // Y方向の中心（上下端の平均）
-  // --------------------------------
-  const cardRectCenterY = `calc((${centerYOf(minRow)} + ${centerYOf(maxRow)}) / 2)`;
-
-  // --------------------------------
-  // カード1枚分の高さだけ取得
-  // --------------------------------
-  const { h: cardH } = sizeByOrientation(orientation);
-
-  // --------------------------------
-  // anchors の縦方向の広がりを反映した高さ
-  // --------------------------------
-  const rowSpan = maxRow - minRow;
+  });
+  // anchors の縦方向の広がりを反映した高さを stepY とスパンから求める
   const cardRectH = `calc(${cardH} + (${stepY} * ${rowSpan}))`;
 
-  // --------------------------------
-  // ボタンの高さ
-  // --------------------------------
+  // ボタンの高さをカード1枚分の高さと比率から計算する
   const buttonH = `calc(${cardH} * ${heightRatio})`;
 
-  // --------------------------------
-  // カード枠の上端
-  // --------------------------------
+  // カード枠の上端位置を、中心座標から半分の高さを引いて求める
   const cardRectTop = `calc(${cardRectCenterY} - (${cardRectH} / 2))`;
 
-  // --------------------------------
-  // slot に応じたボタン上端
-  // --------------------------------
+  // slot 別にボタンの上端位置を計算し、縦方向の配置を分かりやすくする
   const buttonTop =
     slot === "top"
       ? cardRectTop
@@ -98,9 +57,7 @@ export const buttonFromPoints = (args: {
           ? `calc(${cardRectTop} + (${buttonH} * 2) + ((${buttonH} / 3) * 2))`
           : cardRectTop;
 
-  // --------------------------------
-  // RectDef 用に中心Yへ変換
-  // --------------------------------
+  // 上端に高さの半分を足してボタン中心Yを求める
   const centerY = `calc(${buttonTop} + (${buttonH} / 2))`;
 
   return {
