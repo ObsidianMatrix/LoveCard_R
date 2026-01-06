@@ -7,8 +7,8 @@ import type { GameAction } from "./actions";
 import { createInitialGameState } from "./createInitialGameState";
 // React/TypeScript の import 構文で ID 生成関数を取得する。カード実体を作る際に src/common/state/id の createId を使う。
 import { createId } from "./id";
-// React/TypeScript の import 構文で makeZoneKey を取得する。ゾーンのキー文字列を共通の書式で作るため src/board/layout/zone/model/zonesLayout から参照する。
-import { makeZoneKey } from "../../board/layout/zone/model/zonesLayout";
+// React/TypeScript の import 構文で makeZoneKey を取得する。ゾーンのキー文字列を共通の書式で作るため src/board/elements/zones/_shared から参照する。
+import { makeZoneKey } from "../../board/elements/zones/_shared";
 // デッキゾーンのキーを定数化して、状態管理と書式を合わせます
 const deckZoneKey = makeZoneKey("deck");
 

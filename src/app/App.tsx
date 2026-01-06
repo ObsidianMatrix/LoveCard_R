@@ -32,17 +32,17 @@ import { zoneFromPoints } from "../board/layout/zone/zoneFromPoints";
 // ボタン配置ロジックを専用モジュールに委譲し、ここでは戻り値を ButtonFrame に渡す。
 import { buttonFromPoints } from "../board/layout/button/buttonFromPoints";
 
-// 盤面に配置するゾーンの定義配列をインポートする（../board/layout/zone/render/zones）。
-// 各ゾーンのアンカーやラベル、コンテンツをまとめたデータをここで消費し、map で描画する。
-import { zones } from "../board/layout/zone/render/zones";
+// 盤面に配置するゾーンの定義配列をインポートする（../board/elements/zones/_shared）。
+// 各ゾーンフォルダで作ったレイアウトとレンダラーをまとめた配列をここで受け取り、map で描画する。
+import { zones } from "../board/elements/zones/_shared";
 
 // ボタン定義生成関数をインポートする（../board/layout/button/render/buttons の createButtons）。
 // ボタン配置と見た目を生成する処理を外部に分離、App では actions を注入して得られた配列を描画する。
 import { createButtons } from "../board/layout/button/render/buttons";
 
-// ゾーンキー生成ヘルパーをインポートする（../board/layout/zone/model/zonesLayout の makeZoneKey）。
+// ゾーンキー生成ヘルパーをインポートする（../board/elements/zones/_shared の makeZoneKey）。
 // ゾーン名から一貫したキーを作る処理をここに委譲し、状態参照や比較で使用する。
-import { makeZoneKey } from "../board/layout/zone/model/zonesLayout";
+import { makeZoneKey } from "../board/elements/zones/_shared";
 
 // ボタン動作をまとめて生成する関数をインポートする（../board/button/actions/createButtonActions）。
 // クリック時の処理組み立てを外部化し、App では依存関数を注入するだけで済むようにしている。
@@ -187,7 +187,7 @@ export default function App() {
           <p>deckCount: {deckCardCount}</p>
         </div>
 
-        {/* zones 配列（../board/layout/zone/render/zones）の各要素を map（Array.prototype.map）で JSX に変換する。
+        {/* zones 配列（../board/elements/zones/_shared）の各要素を map（Array.prototype.map）で JSX に変換する。
             map のコールバックはアロー関数 (z) => {...} で、外側の grid や sizeByOrientation をクロージャとして参照する。
             React では配列をそのままレンダリング可能で、各要素に key を付与することで差分計算を安定させる。 */}
         {zones.map((z) => {

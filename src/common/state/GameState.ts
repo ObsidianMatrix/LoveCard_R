@@ -1,6 +1,6 @@
 // src/common/state/GameState.ts
-// React/TypeScript の型定義として ZoneKey を取り込むための import。盤面レイアウトで定義したゾーン識別子を状態型に含める。
-import type { ZoneKey } from "../../board/layout/zone/model/zonesLayout";
+// React/TypeScript の型定義として ZoneKey を取り込むための import。盤面レイアウトで定義したゾーン識別子を src/board/elements/zones/_shared から参照し、状態型に含める。
+import type { ZoneKey } from "../../board/elements/zones/_shared";
 /**
  * カード1枚を識別するためのIDです。
  * 同じカード番号でも、別の実体として区別するために使います。
