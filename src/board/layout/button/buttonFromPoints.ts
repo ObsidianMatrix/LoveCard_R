@@ -1,10 +1,10 @@
 // ファイル責務: ボタンのアンカーポイント情報と段指定から、描画に必要な矩形（中心座標・幅・高さ）を算出する。
 // グリッド計算の共通ヘルパー computeRectFromPoints を用い、ボタン特有の高さ・段位置計算をこのファイルに集約する。
 
-// computeRectFromPoints ヘルパーをインポートする。アンカーポイントから中心座標やカードサイズ・スパンを取得する処理を共通化する。
-import { computeRectFromPoints } from "../grid/computeRectFromPoints";
-// グリッド関連の型をインポートする。GridPoint はアンカー座標、Orientation は向き、RectDef は戻り値となる矩形情報。
-import type { GridPoint, Orientation, RectDef } from "../grid/types";
+// computeRectFromPoints ヘルパーをインポートする。アンカーポイントから中心座標やカードサイズ・スパンを取得する処理を共通化するため、src/common/layout/grid/computeRectFromPoints を参照する。
+import { computeRectFromPoints } from "../../../common/layout/grid/computeRectFromPoints";
+// グリッド関連の型をインポートする。GridPoint はアンカー座標、Orientation は向き、RectDef は戻り値となる矩形情報で、src/common/layout/grid/types に集約している。
+import type { GridPoint, Orientation, RectDef } from "../../../common/layout/grid/types";
 
 /**
  * 1枚のカード枠の中で、ボタンを置く位置を段階で表す型。

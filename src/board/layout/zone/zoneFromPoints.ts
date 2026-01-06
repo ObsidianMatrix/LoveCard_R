@@ -2,11 +2,11 @@
 // グリッド計算の共通ヘルパー computeRectFromPoints を利用し、ゾーン固有の幅高さ計算だけをここに集約する。
 
 // 矩形計算ヘルパーをインポートする。
-// ../grid/computeRectFromPoints で中心座標・カードサイズ・スパン数を求める共通処理を利用する。
-import { computeRectFromPoints } from "../grid/computeRectFromPoints";
+// src/common/layout/grid/computeRectFromPoints で中心座標・カードサイズ・スパン数を求める共通処理を利用する。
+import { computeRectFromPoints } from "../../../common/layout/grid/computeRectFromPoints";
 // グリッド関連の型をインポートする。
 // GridPoint はアンカー座標、Orientation は向き、RectDef は戻り値となる矩形情報。
-import type { GridPoint, Orientation, RectDef } from "../grid/types";
+import type { GridPoint, Orientation, RectDef } from "../../../common/layout/grid/types";
 
 /**
  * 点の配列から「1つの枠」を作ります

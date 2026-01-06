@@ -20,13 +20,9 @@ import { DeckZoneFrame } from "../board/layout/zone/ui/DeckZoneFrame";
 // ボタンのクリック領域と見た目を統一する役割を持ち、App から渡された onClick を実行する。
 import { ButtonFrame } from "../board/layout/button/ui/buttonFrame";
 
-// グリッド生成関数をインポートする（../board/layout/grid/grid の createGrid 関数）。
-// 盤面を rows×cols の均等グリッドとして扱う計算を外部モジュールに委譲し、ここでは返却されたヘルパーを使う。
-import { createGrid } from "../board/layout/grid/grid";
-
-// カードサイズ計算関数をインポートする（../board/layout/cardSize の createCardSize 関数）。
-// カードの縦横比や向きごとの幅高さ取得をこのユーティリティに任せ、App では返却された sizeByOrientation を利用する。
-import { createCardSize } from "../board/layout/cardSize";
+// グリッド生成関数とカードサイズ計算関数をインポートする（../common/layout の createGrid / createCardSize）。
+// 盤面を rows×cols の均等グリッドとして扱う計算と、向きごとのカード幅高さ計算を外部モジュールに委譲し、返却されたヘルパーをここで利用する。
+import { createGrid, createCardSize } from "../common/layout";
 
 // ゾーンの中心座標とサイズをアンカーポイントから計算する関数をインポートする（../board/layout/zone/zoneFromPoints）。
 // 位置計算の詳細を分離し、App では算出された RectDef を枠コンポーネントに渡すのみとする。
@@ -72,25 +68,13 @@ import { LabelFrame } from "../board/layout/label/ui/LabelFrame";
 // 具体的な計算処理を外部化し、ここでは算出した RectDef を枠に渡す。
 import { labelFromPoints } from "../board/layout/label/labelFromPoints";
 
-// ゲーム初期状態を生成する関数をインポートする（../board/state/createInitialGameState）。
-// 状態初期化ロジックをこのモジュールに委譲し、useReducer の初期値を簡潔に指定する。
-import { createInitialGameState } from "../board/state/createInitialGameState";
-
-// ゲーム状態を更新する reducer をインポートする（../board/state/reducer の gameReducer）。
-// 状態遷移のロジックをこのファイルから分離し、純粋関数として管理する。
-import { gameReducer } from "../board/state/reducer";
+// ゲーム初期状態生成・reducer・Context・セレクターをまとめてインポートする（../common/state）。
+// 状態初期化ロジックと状態遷移、Context 配布、ゾーン内カード取得をそれぞれ専用モジュールに委譲し、App は useReducer と描画の統合に集中する。
+import { createInitialGameState, gameReducer, GameStateProvider, selectCardIdsInZone } from "../common/state";
 
 // デッキゾーンの表示コンポーネントをインポートする（../board/zone/Deck）。
 // ゾーン内のカード表示責務を Deck コンポーネントに委譲し、App は zoneKey を渡すのみとする。
 import { Deck } from "../board/zone/Deck";
-
-// Context プロバイダをインポートする（../board/state/GameStateContext の GameStateProvider）。
-// state と dispatch をツリー全体に配布する役目を持ち、App がルートでラップする。
-import { GameStateProvider } from "../board/state/GameStateContext";
-
-// ゾーン内のカード ID を取得するセレクターをインポートする（../board/state/selectors の selectCardIdsInZone）。
-// 状態構造を知るロジックをセレクターに任せ、App は取得した配列を UI で使うだけにする。
-import { selectCardIdsInZone } from "../board/state/selectors";
 
 // デッキゾーンのキーを定数化する。makeZoneKey("deck") を使い、状態やイアウトで一貫したキーを共有する。
 // ここで作成しておくことで複数箇所で同じキーを参照でき、タイポ防止と変更箇所の集中管理を実現する。
@@ -98,17 +82,17 @@ const deckZoneKey = makeZoneKey("deck");
 
 // App コンポーネント本体。React の関数コンポーネントとしてエクスポートし、main.tsx で描画されるルートとなる。
 export default function App() {
-  // createGrid（../board/layout/grid/grid）を呼び出してグリッド計算用オブジェクトを生成する。
+  // createGrid（../common/layout）を呼び出してグリッド計算用オブジェクトを生成する。
   // 引数 rows:4, cols:5 は盤面を 4 行 5 列の分割で扱うことを指定し、戻り値には centerXOf/centerYOf などの座標計算関数が含まれる。
   const grid = createGrid({ rows: 4, cols: 5 });
 
-  // createCardSize（../board/layout/cardSize）を呼び出し、カードの縦横サイズ情報を取得する。
+  // createCardSize（../common/layout）を呼び出し、カードの縦横サイズ情報を取得する。
   // 戻り値の sizeByOrientation 関数を取り出し、向きごとに幅高さを取得できるようにする。
   const card = createCardSize();
   const sizeByOrientation = card.sizeByOrientation;
 
   // React.useReducer（React の標準フック）でゲーム状態と dispatch 関数を作成する。
-  // 第1引数 gameReducer（../board/state/reducer）、
+  // 第1引数 gameReducer（../common/state）、
   // 第2引数は初期値 undefined、
   // 第3引数で初期化関数 createInitialGameState を渡し、初回レンダリング時に初期状態を構築する。
   const [state, dispatch] = React.useReducer(gameReducer, undefined, () => createInitialGameState());
@@ -182,7 +166,7 @@ export default function App() {
   // actions 辞書を引数に渡し、戻り値の ButtonDef 配列を後続の map で描画する。
   const buttons = createButtons(actions);
 
-  // selectCardIdsInZone（../board/state/selectors）で deck ゾーンに含まれるカード ID 配列を取得する。
+  // selectCardIdsInZone（../common/state）で deck ゾーンに含まれるカード ID 配列を取得する。
   // 引数 state は現在のゲーム状態、deckZoneKey は "deck" ゾーンのキー。戻り値を deckCardIds として保持し、長さを計算する。
   const deckCardIds = selectCardIdsInZone(state, deckZoneKey);
   // 配列 length プロパティでデッキの総枚数を取得する。再利用するため deckCardCount として定数化し、UI 表示や DeckZoneFrame へ渡す。
@@ -190,7 +174,7 @@ export default function App() {
 
   // JSX を返す。GameStateProvider で全体をラップし、Stage 内にゾーン・ボタン・ラベルを配置する。
   return (
-    // GameStateProvider（../board/state/GameStateContext）に state と dispatch を渡し、Context を通じて子孫コンポーネントに提供する。
+    // GameStateProvider（../common/state）に state と dispatch を渡し、Context を通じて子孫コンポーネントに提供する。
     <GameStateProvider state={state} dispatch={dispatch}>
       {/* Stage コンポーネントで盤面の土台を作る。children としてゾーンやボタンが配置され、絶対位置指定が Stage を基準とする。 */}
       <Stage>

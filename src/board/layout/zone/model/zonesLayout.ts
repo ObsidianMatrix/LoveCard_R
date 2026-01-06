@@ -2,8 +2,8 @@
 // 状態管理で用いる一意キーの生成ルールを提供する。
 // 見た目や中身の生成は別モジュールに委譲し、ここではレイアウトに必要な最低限のデータのみを保持する。
 
-// グリッド座標(GridPoint)と向き(Orientation)の型をインポートする。ゾーン配置計算の基礎情報として使用する。
-import type { GridPoint, Orientation } from "../../grid/types";
+// グリッド座標(GridPoint)と向き(Orientation)の型をインポートする。ゾーン配置計算の基礎情報として使用するため、src/common/layout/grid/types を参照する。
+import type { GridPoint, Orientation } from "../../../../common/layout/grid/types";
 
 /**
  * 枠の種類（同じ種類は見た目やルールが同じになる想定）。
