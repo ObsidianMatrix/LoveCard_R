@@ -52,9 +52,9 @@ import { openTextFile } from "../board/button/actions/openJsonFile";
 // JSON 解析とバリデーションを専用モジュールに任せ、App では戻り値の deckName と countsByCardNumber を受け取り状態更新に使う。
 import { parseDeckJson } from "../board/button/actions/parseDeckJson";
 
-// ラベル定義配列をインポートする（../board/layout/label/render/labels）。
-// ラベルの配置情報とコンテンツをデータ化しているため、App では map で描画するだけに留める。
-import { labels } from "../board/layout/label/render/labels";
+// ラベル定義配列をインポートする（../board/elements/labels/_shared）。
+// 各ラベルフォルダの layout/renderer を合成した配列で、App では map して描画するだけに限定する。
+import { labels } from "../board/elements/labels/_shared";
 
 // ラベル枠コンポーネントをインポートする（../board/layout/label/ui/LabelFrame）。
 // ラベルの見た目と位置決めを担当する UI コンポーネントを使用し、App から中心座標などを渡す。
@@ -212,7 +212,7 @@ export default function App() {
           );
         })}
 
-        {/* labels 配列（../board/layout/label/render/labels）を map で展開し、ラベルの枠と内容を描画する。 */}
+        {/* labels 配列（../board/elements/labels/_shared）を map で展開し、ラベルの枠と内容を描画する。 */}
         {labels.map((l) => {
           // labelFromPoints（../board/layout/label/labelFromPoints）を呼び出し、ラベルの位置とサイズをアンカーから計算する。
           // 引数には orientation, anchors, centerXOf, centerYOf, stepX, stepY, sizeByOrientation, slot（段の指定）, heightRatio（高さ比率）, laneHeightRatio（列内の段間隔比率）を渡す。

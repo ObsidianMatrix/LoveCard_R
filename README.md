@@ -14,12 +14,13 @@ Vite + React + TypeScript を利用し、盤面上のゾーンやボタンをグ
 │  │  ├─ layout/         # グリッド座標計算とカードサイズなど共通レイアウト計算
 │  │  └─ state/          # GameState 型、reducer、Context、セレクター、初期化処理
 │  ├─ board/             # 盤面関連の機能を担当するディレクトリ
-│  │  ├─ elements/       # ゾーン/ボタンのレイアウト・レンダラー・アクション定義をフォルダ単位で管理（_shared で配列連結）
+│  │  ├─ elements/       # ゾーン/ボタン/ラベルのレイアウトと表示定義をフォルダ単位で管理し、_shared で配列連結
 │  │  │  ├─ zones/       # ゾーンの layout/renderer をゾーン別フォルダで管理
-│  │  │  └─ buttons/     # ボタンの layout/renderer/action をボタン別フォルダで管理
+│  │  │  ├─ buttons/     # ボタンの layout/renderer/action をボタン別フォルダで管理
+│  │  │  └─ labels/      # ラベルの layout/renderer をラベル別フォルダで管理
 │  │  ├─ button/         # ボタン表示コンポーネントと Import 系ユーティリティ
 │  │  ├─ deck/           # デッキJSONのパースや型定義
-│  │  ├─ label/          # ラベルのレイアウト・表示
+│  │  ├─ label/          # ラベルの枠計算やプレゼンテーションコンポーネント
 │  │  ├─ layout/         # ゾーン枠やボタン/ラベルの座標計算とUIコンポーネント
 │  │  ├─ stage/          # 盤面全体の土台(Stageコンポーネント)
 │  │  ├─ zone/           # 各ゾーン(デッキ等)の表示コンポーネント
@@ -43,7 +44,7 @@ flowchart TD
     B --> G[common/layout/cardSize<br/>createCardSize]
     B --> H[board/elements/zones/_shared<br/>zones定義]
     B --> I[board/elements/buttons/_shared<br/>createButtons]
-    B --> J[board/layout/label/render/labels<br/>labels定義]
+    B --> J[board/elements/labels/_shared<br/>labels定義]
     B --> K[board/layout/zone/zoneFromPoints<br/>zoneFromPoints]
     B --> L[board/layout/button/buttonFromPoints<br/>buttonFromPoints]
     B --> M[board/layout/label/labelFromPoints<br/>labelFromPoints]

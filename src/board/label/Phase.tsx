@@ -16,7 +16,7 @@ type PhaseProps = {
 };
 
 // Phase コンポーネント本体。
-// labelRenderers（../layout/label/render/labelRenderers.tsx）から呼び出され、
+// labelRenderers（../elements/labels/_shared）から呼び出され、
 // 渡された title を表示する役割のみを持つ。
 export function Phase(props: PhaseProps) {
   // JSX の div 要素を返し、className に styles.text を指定してテキストスタイルを適用する。
