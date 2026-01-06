@@ -17,8 +17,8 @@ import type { ZoneKey, ZoneKind } from "../model/zonesLayout";
  * zoneKey は「ゾーン識別子」を受け取り、必要に応じて data 属性などに載せます。
  */
 export const zoneRenderers: Record<ZoneKind, (zoneKey: ZoneKey) => React.ReactNode> = {
-  // デッキは App 側で実データを渡すため、ここでは空配列を渡して雛形だけ用意します
-  deck: () => <Deck cards={[]} />,
+  // デッキは zoneKey だけを渡し、内部で状態を参照させます
+  deck: (zoneKey) => <Deck zoneKey={zoneKey} />,
   // 以降のゾーンは zoneKey を属性に渡してトレースしやすくします
   discard: (zoneKey) => <Discard zoneKey={zoneKey} />,
   energyDeck: (zoneKey) => <EnergyDeck zoneKey={zoneKey} />,
