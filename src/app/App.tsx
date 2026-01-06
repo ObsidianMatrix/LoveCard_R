@@ -20,29 +20,17 @@ import { DeckZoneFrame } from "../board/layout/zone/ui/DeckZoneFrame";
 // ボタンのクリック領域と見た目を統一する役割を持ち、App から渡された onClick を実行する。
 import { ButtonFrame } from "../board/layout/button/ui/buttonFrame";
 
+// ラベル枠コンポーネントをインポートする（../board/layout/label/ui/LabelFrame）。
+// ラベルの見た目と位置決めを担当する UI コンポーネントを使用し、App から中心座標などを渡す。
+import { LabelFrame } from "../board/layout/label/ui/LabelFrame";
+
 // グリッド生成関数とカードサイズ計算関数をインポートする（../common/layout の createGrid / createCardSize）。
 // 盤面を rows×cols の均等グリッドとして扱う計算と、向きごとのカード幅高さ計算を外部モジュールに委譲し、返却されたヘルパーをここで利用する。
 import { createGrid, createCardSize } from "../common/layout";
 
-// ゾーンの中心座標とサイズをアンカーポイントから計算する関数をインポートする（../board/layout/zone/zoneFromPoints）。
-// 位置計算の詳細を分離し、App では算出された RectDef を枠コンポーネントに渡すのみとする。
-import { zoneFromPoints } from "../board/layout/zone/zoneFromPoints";
-
-// ボタンの中心座標とサイズをアンカーポイントから計算する関数をインポートする（../board/layout/button/buttonFromPoints）。
-// ボタン配置ロジックを専用モジュールに委譲し、ここでは戻り値を ButtonFrame に渡す。
-import { buttonFromPoints } from "../board/layout/button/buttonFromPoints";
-
-// 盤面に配置するゾーンの定義配列をインポートする（../board/elements/zones/_shared）。
-// 各ゾーンフォルダで作ったレイアウトとレンダラーをまとめた配列をここで受け取り、map で描画する。
-import { zones } from "../board/elements/zones/_shared";
-
-// ボタン定義配列生成関数をインポートする（../board/elements/buttons/_shared の createButtons）。
-// 各ボタンフォルダの layout/render/action をまとめた配列を返し、App では依存を注入するだけで描画できる。
-import { createButtons } from "../board/elements/buttons/_shared";
-
-// ゾーンキー生成ヘルパーをインポートする（../board/elements/zones/_shared の makeZoneKey）。
-// ゾーン名から一貫したキーを作る処理をここに委譲し、状態参照や比較で使用する。
-import { makeZoneKey } from "../board/elements/zones/_shared";
+// 組み立て済みのゾーン/ボタン/ラベル配列を生成するユーティリティをインポートする（../elements/common）。
+// 座標計算を elements/common 側で完結させ、App は rect 付きの配列を描画するだけに責務を縮小するため、この新しい入口を利用する。
+import { assembleButtons, assembleLabels, assembleZones, makeZoneKey } from "../elements/common";
 
 // ファイル選択ダイアログを開く関数をインポートする（../board/button/actions/openJsonFile の openTextFile）。
 // ブラウザ API を直接扱う処理を専用モジュールに閉じ込め、App では結果の文字列を受け取ってパースする。
@@ -51,18 +39,6 @@ import { openTextFile } from "../board/button/actions/openJsonFile";
 // デッキ JSON をパースする関数をインポートする（../board/button/actions/parseDeckJson）。
 // JSON 解析とバリデーションを専用モジュールに任せ、App では戻り値の deckName と countsByCardNumber を受け取り状態更新に使う。
 import { parseDeckJson } from "../board/button/actions/parseDeckJson";
-
-// ラベル定義配列をインポートする（../board/elements/labels/_shared）。
-// 各ラベルフォルダの layout/renderer を合成した配列で、App では map して描画するだけに限定する。
-import { labels } from "../board/elements/labels/_shared";
-
-// ラベル枠コンポーネントをインポートする（../board/layout/label/ui/LabelFrame）。
-// ラベルの見た目と位置決めを担当する UI コンポーネントを使用し、App から中心座標などを渡す。
-import { LabelFrame } from "../board/layout/label/ui/LabelFrame";
-
-// ラベルの位置とサイズをアンカーから計算する関数をインポートする（../board/layout/label/labelFromPoints）。
-// 具体的な計算処理を外部化し、ここでは算出した RectDef を枠に渡す。
-import { labelFromPoints } from "../board/layout/label/labelFromPoints";
 
 // ゲーム初期状態生成・reducer・Context・セレクターをまとめてインポートする（../common/state）。
 // 状態初期化ロジックと状態遷移、Context 配布、ゾーン内カード取得をそれぞれ専用モジュールに委譲し、App は useReducer と描画の統合に集中する。
@@ -93,14 +69,26 @@ export default function App() {
   // 第3引数で初期化関数 createInitialGameState を渡し、初回レンダリング時に初期状態を構築する。
   const [state, dispatch] = React.useReducer(gameReducer, undefined, () => createInitialGameState());
 
-  // createButtons（../board/elements/buttons/_shared）を呼び出し、レイアウトと表示とクリック処理を合成した配列を取得する。
-  // state/dispatch/openTextFile/parseDeckJson を依存として渡し、各ボタンフォルダの actionFactory が onClick を構築する。
-  const buttons = createButtons({
-    state,
-    dispatch,
-    openTextFile,
-    parseDeckJson,
+  // assembleZones（../elements/common）を呼び出し、ゾーン定義に座標情報を合成した配列を取得する。
+  // grid と sizeByOrientation を渡し、App 側は rect 付きのデータを受け取って描画するだけに責務を絞る。
+  const zones = assembleZones({ grid, sizeByOrientation });
+
+  // createButtons による依存注入と buttonFromPoints をまとめた assembleButtons（../elements/common）を呼び出す。
+  // state/dispatch/openTextFile/parseDeckJson を渡し、grid/sizeByOrientation と併せてボタンの rect を計算済みで受け取る。
+  const buttons = assembleButtons({
+    grid,
+    sizeByOrientation,
+    deps: {
+      state,
+      dispatch,
+      openTextFile,
+      parseDeckJson,
+    },
   });
+
+  // assembleLabels（../elements/common）を呼び出し、ラベル定義に座標情報を付与した配列を取得する。
+  // grid/sizeByOrientation を渡して labelFromPoints を内部適用し、App では LabelFrame への受け渡しだけで表示が完結するようにする。
+  const labels = assembleLabels({ grid, sizeByOrientation });
 
   // selectCardIdsInZone（../common/state）で deck ゾーンに含まれるカード ID 配列を取得する。
   // 引数 state は現在のゲーム状態、deckZoneKey は "deck" ゾーンのキー。戻り値を deckCardIds として保持し、長さを計算する。
@@ -123,23 +111,9 @@ export default function App() {
           <p>deckCount: {deckCardCount}</p>
         </div>
 
-        {/* zones 配列（../board/elements/zones/_shared）の各要素を map（Array.prototype.map）で JSX に変換する。
-            map のコールバックはアロー関数 (z) => {...} で、外側の grid や sizeByOrientation をクロージャとして参照する。
-            React では配列をそのままレンダリング可能で、各要素に key を付与することで差分計算を安定させる。 */}
+        {/* zones 配列（assembleZones の戻り値）の各要素を map（Array.prototype.map）で JSX に変換する。
+            zoneFromPoints で計算済みの rect を含むため、App 側は枠コンポーネントに値を渡すだけで描画が完結する。 */}
         {zones.map((z) => {
-          // zoneFromPoints（../board/layout/zone/zoneFromPoints）を呼び出し、ゾーンのアンカーポイントから RectDef を計算する。
-          // 引数 orientation: ゾーンの向き、points: アンカー配列、centerXOf/centerYOf: グリッド座標計算関数、stepX/stepY: 増分、sizeByOrientation: 向きごとのカードサイズ。
-          // 戻り値 rect には centerX/centerY/width/height が入り、ZoneFrame/DeckZoneFrame の props に渡す。
-          const rect = zoneFromPoints({
-            orientation: z.orientation,
-            points: z.anchors,
-            centerXOf: grid.centerXOf,
-            centerYOf: grid.centerYOf,
-            stepX: grid.stepX,
-            stepY: grid.stepY,
-            sizeByOrientation,
-          });
-
           // deck ゾーンのみ DeckZoneFrame を使って特別な見た目で描画する条件分岐。
           // if 文で z.zoneKey と deckZoneKey を比較し、一致時のみ DeckZoneFrame を返す。
           if (z.zoneKey === deckZoneKey) {
@@ -149,10 +123,10 @@ export default function App() {
               <DeckZoneFrame
                 key={z.zoneKey}
                 title={z.label}
-                centerX={rect.centerX}
-                centerY={rect.centerY}
-                width={rect.width}
-                height={rect.height}
+                centerX={z.rect.centerX}
+                centerY={z.rect.centerY}
+                width={z.rect.width}
+                height={z.rect.height}
                 variant={z.variant}
                 cardCount={deckCardCount}
               >
@@ -167,10 +141,10 @@ export default function App() {
             <ZoneFrame
               key={z.zoneKey}
               title={z.label}
-              centerX={rect.centerX}
-              centerY={rect.centerY}
-              width={rect.width}
-              height={rect.height}
+              centerX={z.rect.centerX}
+              centerY={z.rect.centerY}
+              width={z.rect.width}
+              height={z.rect.height}
               variant={z.variant}
             >
               {/* z.content（zones 定義内で設定された ReactNode）を children として描画し、ゾーン固有の表示を行う。 */}
@@ -179,31 +153,18 @@ export default function App() {
           );
         })}
 
-        {/* buttons 配列（createButtons の戻り値）を map で展開し、ButtonFrame を生成する。
-            map のコールバック (b) => {...} は各ボタンのレイアウトやクリック処理をクロージャで参照しつつ JSX を返す。 */}
+        {/* buttons 配列（assembleButtons の戻り値）を map で展開し、ButtonFrame を生成する。
+            buttonFromPoints で計算済みの rect を含むため、App では props を渡すだけでクリック領域と表示が描画される。 */}
         {buttons.map((b) => {
-          // buttonFromPoints（../board/layout/button/buttonFromPoints）を呼び出し、ボタンの位置とサイズを計算する。
-          // 引数 orientation: ボタンの向き、points: アンカー、centerXOf/centerYOf: 座標計算関数、stepY: 縦方向増分、sizeByOrientation: カードサイズ辞書、heightRatio: 高さ比率、slot: 縦位置。
-          // 戻り値 rect には centerX/centerY/width/height が含まれ、ButtonFrame へ渡す。
-          const rect = buttonFromPoints({
-            orientation: b.orientation,
-            points: b.anchors,
-            centerXOf: grid.centerXOf,
-            centerYOf: grid.centerYOf,
-            stepY: grid.stepY,
-            sizeByOrientation,
-            heightRatio: 0.25,
-            slot: b.slot,
-          });
-          // ButtonFrame（../board/layout/button/ui/buttonFrame）を返し、計算した座標・サイズとクリック処理を渡す。
+          // ButtonFrame（../board/layout/button/ui/buttonFrame）を返し、assembleButtons で付与済みの rect とクリック処理を渡す。
           // key はテンプレート文字列 `${b.buttonKey}:${b.slot}` でボタンキーとスロットを組み合わせ、一意性を確保する。
           return (
             <ButtonFrame
               key={`${b.buttonKey}:${b.slot}`}
-              centerX={rect.centerX}
-              centerY={rect.centerY}
-              width={rect.width}
-              height={rect.height}
+              centerX={b.rect.centerX}
+              centerY={b.rect.centerY}
+              width={b.rect.width}
+              height={b.rect.height}
               onClick={b.onClick}
             >
               {/* b.content は createButtons で生成されたボタン表示用 ReactNode を保持しており、ここで描画する。 */}
@@ -212,32 +173,16 @@ export default function App() {
           );
         })}
 
-        {/* labels 配列（../board/elements/labels/_shared）を map で展開し、ラベルの枠と内容を描画する。 */}
+        {/* labels 配列（assembleLabels の戻り値）を map で展開し、ラベルの枠と内容を描画する。 */}
         {labels.map((l) => {
-          // labelFromPoints（../board/layout/label/labelFromPoints）を呼び出し、ラベルの位置とサイズをアンカーから計算する。
-          // 引数には orientation, anchors, centerXOf, centerYOf, stepX, stepY, sizeByOrientation, slot（段の指定）, heightRatio（高さ比率）, laneHeightRatio（列内の段間隔比率）を渡す。
-          // 戻り値 rect を LabelFrame の props に利用する。
-          const rect = labelFromPoints({
-            orientation: l.orientation,
-            points: l.anchors,
-            centerXOf: grid.centerXOf,
-            centerYOf: grid.centerYOf,
-            stepX: grid.stepX,
-            stepY: grid.stepY,
-            sizeByOrientation,
-            slot: l.slot,
-            heightRatio: 1 / 6,
-            laneHeightRatio: 0.25,
-          });
-
           // LabelFrame（../board/layout/label/ui/LabelFrame）でラベル枠を描画する。zIndex を 10 に設定し、前面に表示する。
           return (
             <LabelFrame
               key={l.labelKey}
-              centerX={rect.centerX}
-              centerY={rect.centerY}
-              width={rect.width}
-              height={rect.height}
+              centerX={l.rect.centerX}
+              centerY={l.rect.centerY}
+              width={l.rect.width}
+              height={l.rect.height}
               zIndex={10}
             >
               {/* l.content はラベルの実際の表示内容（テキストやアイコン）で、children として描画される。 */}
