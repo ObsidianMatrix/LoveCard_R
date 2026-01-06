@@ -1,5 +1,13 @@
+// ファイル責務: ゾーン種類（ZoneKind）ごとに中身を生成するレンダラー辞書を提供し、
+// 条件分岐を避けてキー→コンポーネントの対応を明確にする。
+// レイアウト側（zones.tsx）はこの辞書を参照して content を作成し、
+// zoneKey を渡すだけで適切なコンポーネントが描画される。
+
+// React 名前空間をインポートする。JSX を使用するために必要であり、戻り値の型として React.ReactNode を扱う。
 import React from "react";
 
+// 各ゾーンの表示コンポーネントをインポートする。
+// ../../../zone 配下の Deck/Discard/EnergyDeck/Energy/Hand/Live/Member/SuccessLive を利用する。
 import { Deck } from "../../../zone/Deck";
 import { Discard } from "../../../zone/Discard";
 import { EnergyDeck } from "../../../zone/EnergyDeck";
@@ -9,6 +17,8 @@ import { Live } from "../../../zone/Live";
 import { Member } from "../../../zone/Member";
 import { SuccessLive } from "../../../zone/SuccessLive";
 
+// zoneKey（唯一のゾーン識別子）と zoneKind（ゾーン種別）の型をインポートする。
+// ../model/zonesLayout で定義されたユニオン型を使用し、辞書のキーを型安全にする。
 import type { ZoneKey, ZoneKind } from "../model/zonesLayout";
 
 /**

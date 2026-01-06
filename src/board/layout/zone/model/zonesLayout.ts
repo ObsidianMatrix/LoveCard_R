@@ -1,7 +1,12 @@
+// ファイル責務: ゾーンの配置定義（アンカー・向き・枠の種類・スロット）を集約し、
+// 状態管理で用いる一意キーの生成ルールを提供する。
+// 見た目や中身の生成は別モジュールに委譲し、ここではレイアウトに必要な最低限のデータのみを保持する。
+
+// グリッド座標(GridPoint)と向き(Orientation)の型をインポートする。ゾーン配置計算の基礎情報として使用する。
 import type { GridPoint, Orientation } from "../../grid/types";
 
 /**
- * 枠の種類（同じ種類は見た目やルールが同じになる想定）
+ * 枠の種類（同じ種類は見た目やルールが同じになる想定）。
  */
 export type ZoneKind =
   | "deck"
@@ -14,7 +19,7 @@ export type ZoneKind =
   | "member";
 
 /**
- * 同じ kind の中で「どの場所か」を表す値
+ * 同じ kind の中で「どの場所か」を表す値。
  */
 export type ZoneSlot = "left" | "center" | "right" | "single";
 /**

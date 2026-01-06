@@ -1,9 +1,20 @@
+// ファイル責務: ボタン配置定義（buttonsLayout）と見た目レンダラー（buttonRenderers）、
+// クリック処理（actions）を合成し、App でそのまま描画できる ButtonDef 配列を生成する。
+// レンダリングロジックとクリックロジックを分離し、ここで両者を束ねることで UI 生成を簡潔にする。
+
+// React 名前空間をインポートし、JSX/ReactNode を扱えるようにする。
 import React from "react";
 
+// Orientation 型をインポートする。ボタンの向きを表し、カードサイズ参照の基準となる。
 import type { Orientation } from "../../grid/types";
+// ボタン配置定義と関連型をインポートする。
+// buttonsLayout は配置データ、ButtonLayout はその型、ButtonKey はボタン識別子のユニオン型。
 import { buttonsLayout, type ButtonLayout, type ButtonKey } from "../model/buttonsLayout";
 
+// ボタンの見た目を生成するレンダラー辞書をインポートする。
+// buttonRenderers は ButtonKey を受けて ReactNode を返す関数群。
 import { buttonRenderers } from "./buttonRenders";
+// クリック処理の辞書型をインポートする。ButtonActions は buttonKey をキーにアクション関数を保持する。
 import type { ButtonActions } from "../../../button/actions/buttonActions";
 
 /**

@@ -1,8 +1,16 @@
+// ファイル責務: ボタンの「配置情報のみ」をデータとして定義し、見た目や動作は他モジュールに委譲する。
+// ボタンキー・向き・アンカーポイント・段(slot)を一元管理し、配列から型を導出して変更時の型整合性を保つ。
+
+// グリッド座標(GridPoint)と向き(Orientation)の型をインポートする。
+// ボタンの配置計算に必要な基本情報として使用する。
 import type { GridPoint, Orientation } from "../../grid/types";
+// ボタンの縦方向スロット指定（top/middle/bottom）を表す ButtonSlot 型をインポートする。
+// buttonFromPoints の計算と整合させるため共通の型を使う。
 import type { ButtonSlot } from "../buttonFromPoints";
 
 /**
- * ボタン配置の定義（配置だけ）
+ * ボタン配置の定義（見た目や動作は含めない）。
+ * buttonKey: 識別子、orientation: 向き、anchors: グリッド上のアンカーポイント、slot: 縦方向の段指定。
  */
 export type ButtonLayout = {
   buttonKey: string;
@@ -11,6 +19,8 @@ export type ButtonLayout = {
   slot: ButtonSlot; // ★追加（上/真ん中/下）
 };
 
+// 実際のボタン配置データ。as const でリテラル型を保持し、
+// satisfies ButtonLayout[] で構造の妥当性を型チェックする。
 export const buttonsLayout = [
   {
     buttonKey: "back",
@@ -45,7 +55,7 @@ export const buttonsLayout = [
 ] as const satisfies ButtonLayout[];
 
 /**
- * ボタンキーの union 型です（"back" | "import" | ...）。
- * buttonsLayout から作るので、ボタンを増減しても型が追従します。
+ * ボタンキーの union 型（"back" | "import" | ...）。
+ * buttonsLayout から動的に抽出することで、ボタンを増減しても型定義が自動で同期する。
  */
 export type ButtonKey = (typeof buttonsLayout)[number]["buttonKey"];

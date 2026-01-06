@@ -1,4 +1,11 @@
+// ファイル責務: 複数のアンカーポイントからゾーンの矩形（中心座標・幅・高さ）を算出する。
+// グリッド計算の共通ヘルパー computeRectFromPoints を利用し、ゾーン固有の幅高さ計算だけをここに集約する。
+
+// 矩形計算ヘルパーをインポートする。
+// ../grid/computeRectFromPoints で中心座標・カードサイズ・スパン数を求める共通処理を利用する。
 import { computeRectFromPoints } from "../grid/computeRectFromPoints";
+// グリッド関連の型をインポートする。
+// GridPoint はアンカー座標、Orientation は向き、RectDef は戻り値となる矩形情報。
 import type { GridPoint, Orientation, RectDef } from "../grid/types";
 
 /**
@@ -17,7 +24,7 @@ export const zoneFromPoints = (args: {
   orientation: Orientation;
   points: GridPoint[];
 
-  // 中心点（あなたの式）
+  // 中心点（createGrid で計算した関数）
   centerXOf: (col: number) => string;
   centerYOf: (row: number) => string;
 
@@ -28,6 +35,7 @@ export const zoneFromPoints = (args: {
   // 向きからカード幅/高さ
   sizeByOrientation: (o: Orientation) => { w: string; h: string };
 }): RectDef => {
+  // 分割代入で引数オブジェクトから必要な値を取り出す。
   const { orientation, points, centerXOf, centerYOf, stepX, stepY, sizeByOrientation } = args;
 
   // 共通ヘルパーで中心やスパンを計算し、ゾーン固有のサイズ計算だけ後続で行う

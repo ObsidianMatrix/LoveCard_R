@@ -6,6 +6,7 @@ Vite + React + TypeScript を利用し、盤面上のゾーンやボタンをグ
 
 ## フォルダ構造（tree形式）
 
+```text
 .
 ├─ src/                  # フロントエンドのソースコード一式
 │  ├─ app/               # ルートコンポーネント(App.tsx)とアプリ全体の組み立て
@@ -23,6 +24,7 @@ Vite + React + TypeScript を利用し、盤面上のゾーンやボタンをグ
 ├─ package.json          # 依存パッケージとスクリプト
 ├─ tsconfig*.json        # TypeScript 設定
 └─ vite.config.ts        # Vite 設定
+```
 
 ## モジュール・関数の連結図（Mermaid flowchart）
 

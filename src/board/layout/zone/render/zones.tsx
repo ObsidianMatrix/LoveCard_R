@@ -1,5 +1,12 @@
+// ファイル責務: ゾーンの配置定義（zonesLayout）と表示コンポーネント（zoneRenderers）を合成し、
+// App で直接描画できる ZoneDef 配列を生成する。
+// レイアウト情報、ラベル生成、zoneKey 補完をここでまとめ、UI 側が map するだけでゾーンを描画できる形にする。
+
+// React 名前空間をインポートし、JSX/ReactNode を扱えるようにする。
 import React from "react";
 
+// Orientation 型と zonesLayout 関連の型・関数をインポートする。
+// 配置データとキー生成ユーティリティを利用して ZoneDef を組み立てる。
 import type { Orientation } from "../../grid/types";
 import {
   zonesLayout,
@@ -10,6 +17,7 @@ import {
   normalizeZoneSlot,
   zoneKeyFromLayout,
 } from "../model/zonesLayout";
+// ゾーンの中身を生成するレンダラー辞書をインポートする。
 import { zoneRenderers } from "./zoneRenderers";
 
 /**
