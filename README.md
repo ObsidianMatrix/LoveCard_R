@@ -14,8 +14,10 @@ Vite + React + TypeScript を利用し、盤面上のゾーンやボタンをグ
 │  │  ├─ layout/         # グリッド座標計算とカードサイズなど共通レイアウト計算
 │  │  └─ state/          # GameState 型、reducer、Context、セレクター、初期化処理
 │  ├─ board/             # 盤面関連の機能を担当するディレクトリ
-│  │  ├─ elements/       # ゾーンごとのレイアウトとレンダラー定義をフォルダ単位で管理（_shared で配列連結）
-│  │  ├─ button/         # ボタン表示・レイアウト・動作（Import/戻る等）
+│  │  ├─ elements/       # ゾーン/ボタンのレイアウト・レンダラー・アクション定義をフォルダ単位で管理（_shared で配列連結）
+│  │  │  ├─ zones/       # ゾーンの layout/renderer をゾーン別フォルダで管理
+│  │  │  └─ buttons/     # ボタンの layout/renderer/action をボタン別フォルダで管理
+│  │  ├─ button/         # ボタン表示コンポーネントと Import 系ユーティリティ
 │  │  ├─ deck/           # デッキJSONのパースや型定義
 │  │  ├─ label/          # ラベルのレイアウト・表示
 │  │  ├─ layout/         # ゾーン枠やボタン/ラベルの座標計算とUIコンポーネント
@@ -40,7 +42,7 @@ flowchart TD
     B --> F[common/layout/grid/grid<br/>createGrid]
     B --> G[common/layout/cardSize<br/>createCardSize]
     B --> H[board/elements/zones/_shared<br/>zones定義]
-    B --> I[board/layout/button/render/buttons<br/>createButtons]
+    B --> I[board/elements/buttons/_shared<br/>createButtons]
     B --> J[board/layout/label/render/labels<br/>labels定義]
     B --> K[board/layout/zone/zoneFromPoints<br/>zoneFromPoints]
     B --> L[board/layout/button/buttonFromPoints<br/>buttonFromPoints]
@@ -49,7 +51,7 @@ flowchart TD
     B --> O[board/layout/zone/ui/ZoneFrame & DeckZoneFrame]
     B --> P[board/layout/button/ui/ButtonFrame]
     B --> Q[board/layout/label/ui/LabelFrame]
-    B --> R[board/button/actions/createButtonActions]
+    I --> R[board/elements/buttons/import/index<br/>Import actionFactory]
     R --> S[board/button/actions/openJsonFile<br/>openTextFile]
     R --> T[board/button/actions/parseDeckJson]
     B --> U[common/state/selectors<br/>selectCardIdsInZone]
