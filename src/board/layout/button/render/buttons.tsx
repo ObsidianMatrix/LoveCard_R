@@ -5,8 +5,8 @@
 // React 名前空間をインポートし、JSX/ReactNode を扱えるようにする。
 import React from "react";
 
-// Orientation 型をインポートする。ボタンの向きを表し、カードサイズ参照の基準となる。
-import type { Orientation } from "../../grid/types";
+// Orientation 型をインポートする。ボタンの向きを表し、カードサイズ参照の基準となるため、src/common/layout/grid/types を参照する。
+import type { Orientation } from "../../../../common/layout/grid/types";
 // ボタン配置定義と関連型をインポートする。
 // buttonsLayout は配置データ、ButtonLayout はその型、ButtonKey はボタン識別子のユニオン型。
 import { buttonsLayout, type ButtonLayout, type ButtonKey } from "../model/buttonsLayout";

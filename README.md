@@ -10,12 +10,14 @@ Vite + React + TypeScript を利用し、盤面上のゾーンやボタンをグ
 .
 ├─ src/                  # フロントエンドのソースコード一式
 │  ├─ app/               # ルートコンポーネント(App.tsx)とアプリ全体の組み立て
+│  ├─ common/            # レイアウト・状態管理の共通ユーティリティ
+│  │  ├─ layout/         # グリッド座標計算とカードサイズなど共通レイアウト計算
+│  │  └─ state/          # GameState 型、reducer、Context、セレクター、初期化処理
 │  ├─ board/             # 盤面関連の機能を担当するディレクトリ
 │  │  ├─ button/         # ボタン表示・レイアウト・動作（Import/戻る等）
 │  │  ├─ deck/           # デッキJSONのパースや型定義
 │  │  ├─ label/          # ラベルのレイアウト・表示
-│  │  ├─ layout/         # グリッド・ゾーン・ボタンの座標計算とUIコンポーネント
-│  │  ├─ state/          # useReducer 用の状態、アクション、セレクター、コンテキスト
+│  │  ├─ layout/         # ゾーン・ボタン・ラベルの座標計算とUIコンポーネント
 │  │  ├─ stage/          # 盤面全体の土台(Stageコンポーネント)
 │  │  ├─ zone/           # 各ゾーン(デッキ等)の表示コンポーネント
 │  ├─ styles/            # グローバルスタイルやCSS Modules
@@ -31,11 +33,11 @@ Vite + React + TypeScript を利用し、盤面上のゾーンやボタンをグ
 ```mermaid
 flowchart TD
     A[main.tsx<br/>ReactDOM.createRoot] --> B[app/App.tsx<br/>Appコンポーネント]
-    B --> C[board/state/GameStateContext<br/>GameStateProvider]
-    B --> D[board/state/reducer<br/>gameReducer]
-    B --> E[board/state/createInitialGameState]
-    B --> F[board/layout/grid/grid<br/>createGrid]
-    B --> G[board/layout/cardSize<br/>createCardSize]
+    B --> C[common/state/GameStateContext<br/>GameStateProvider]
+    B --> D[common/state/reducer<br/>gameReducer]
+    B --> E[common/state/createInitialGameState]
+    B --> F[common/layout/grid/grid<br/>createGrid]
+    B --> G[common/layout/cardSize<br/>createCardSize]
     B --> H[board/layout/zone/render/zones<br/>zones定義]
     B --> I[board/layout/button/render/buttons<br/>createButtons]
     B --> J[board/layout/label/render/labels<br/>labels定義]
@@ -49,7 +51,7 @@ flowchart TD
     B --> R[board/button/actions/createButtonActions]
     R --> S[board/button/actions/openJsonFile<br/>openTextFile]
     R --> T[board/button/actions/parseDeckJson]
-    B --> U[board/state/selectors<br/>selectCardIdsInZone]
+    B --> U[common/state/selectors<br/>selectCardIdsInZone]
 ```
 
 ## 読む順番ガイド
@@ -60,10 +62,10 @@ React エントリーポイント。App を root にマウントする流れを�
 src/app/App.tsx  
 全体の組み立てと状態管理の中心。どのモジュールが組み合わさっているかを理解します。
 
-src/board/state/  
+src/common/state/  
 状態の形・遷移・Context 供給の仕組みを把握します。
 
-src/board/layout/grid/ と src/board/layout/cardSize.ts  
+src/common/layout/grid/ と src/common/layout/cardSize.ts  
 グリッド計算とカードサイズ計算の基礎を確認します。
 
 src/board/layout/zone/ button/ label/  

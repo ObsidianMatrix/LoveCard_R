@@ -3,8 +3,8 @@
 // 増減時に他モジュールの型が自動追従するようにする。
 
 // グリッド座標と向きを表す型をインポートする。GridPoint と Orientation は 
-// ../grid/types で定義され、ラベル配置の基礎情報として使用する。
-import type { GridPoint, Orientation } from "../../grid/types";
+// src/common/layout/grid/types で定義され、ラベル配置の基礎情報として使用する。
+import type { GridPoint, Orientation } from "../../../../common/layout/grid/types";
 // ボタン配置と同じ slot 指定を利用するため、ButtonSlot 型をインポートする。
 // 上/中/下の段を示し、同じセルに重ねる際の位置決めに使う。
 import type { ButtonSlot } from "../../button/buttonFromPoints";

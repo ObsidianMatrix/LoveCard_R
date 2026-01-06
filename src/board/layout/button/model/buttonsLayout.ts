@@ -2,8 +2,8 @@
 // ボタンキー・向き・アンカーポイント・段(slot)を一元管理し、配列から型を導出して変更時の型整合性を保つ。
 
 // グリッド座標(GridPoint)と向き(Orientation)の型をインポートする。
-// ボタンの配置計算に必要な基本情報として使用する。
-import type { GridPoint, Orientation } from "../../grid/types";
+// ボタンの配置計算に必要な基本情報として使用するため、src/common/layout/grid/types から参照する。
+import type { GridPoint, Orientation } from "../../../../common/layout/grid/types";
 // ボタンの縦方向スロット指定（top/middle/bottom）を表す ButtonSlot 型をインポートする。
 // buttonFromPoints の計算と整合させるため共通の型を使う。
 import type { ButtonSlot } from "../buttonFromPoints";

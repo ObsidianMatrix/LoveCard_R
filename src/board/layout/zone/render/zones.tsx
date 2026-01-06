@@ -6,8 +6,8 @@
 import React from "react";
 
 // Orientation 型と zonesLayout 関連の型・関数をインポートする。
-// 配置データとキー生成ユーティリティを利用して ZoneDef を組み立てる。
-import type { Orientation } from "../../grid/types";
+// 配置データとキー生成ユーティリティを利用して ZoneDef を組み立てるため、Orientation は src/common/layout/grid/types から取得する。
+import type { Orientation } from "../../../../common/layout/grid/types";
 import {
   zonesLayout,
   type ZoneKind,

@@ -3,11 +3,11 @@
 // ラベル特有の高さ・段位置・幅計算をこのファイルに集約する。
 
 // 矩形計算ヘルパーをインポートする。
-// ../grid/computeRectFromPoints でアンカー範囲から中心やカードサイズを求める処理を共通化している。
-import { computeRectFromPoints } from "../grid/computeRectFromPoints";
+// src/common/layout/grid/computeRectFromPoints でアンカー範囲から中心やカードサイズを求める処理を共通化している。
+import { computeRectFromPoints } from "../../../common/layout/grid/computeRectFromPoints";
 // グリッド関連の型をインポートする。
 // GridPoint はアンカー座標、Orientation は向き、RectDef は戻り値となる矩形情報。
-import type { GridPoint, Orientation, RectDef } from "../grid/types";
+import type { GridPoint, Orientation, RectDef } from "../../../common/layout/grid/types";
 // 段指定に ButtonSlot 型（top/middle/bottom）を使用するため、ボタンのユーティリティから型をインポートする。
 import type { ButtonSlot } from "../button/buttonFromPoints";
 

@@ -1,4 +1,4 @@
-// src/board/state/actions.ts
+// src/common/state/actions.ts
 
 /**
  * Import で得られた「デッキ名」と「カード番号→枚数」を state に入れるためのActionです。

@@ -1,4 +1,4 @@
-// src/board/state/id.ts
+// src/common/state/id.ts
 
 /**
  * カード実体のIDを作ります。

@@ -4,8 +4,8 @@
 // React 名前空間をインポートし、JSX を扱えるようにする。React.ReactNode 型を利用するためにも必要。
 import React from "react";
 
-// Orientation 型をインポートする。ラベルの向きを指定するために使用する。
-import type { Orientation } from "../../grid/types";
+// Orientation 型をインポートする。ラベルの向きを指定するために使用するため、src/common/layout/grid/types から取得する。
+import type { Orientation } from "../../../../common/layout/grid/types";
 // labelsLayout（レイアウト定義）と LabelLayout 型をインポートする。配置データを基に LabelDef を組み立てる。
 import { labelsLayout, type LabelLayout } from "../model/labelsLayout";
 // labelRenderers をインポートする。labelKey を受け取り、具体的なラベルコンテンツ（ReactNode）を生成する関数群。

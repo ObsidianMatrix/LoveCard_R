@@ -1,8 +1,11 @@
+// React の関数コンポーネントとフックを使うための import。JSX を解釈し、useMemo などを利用するために React 名前空間を読み込む。
 import React from "react";
+// CSS Modules でスタイルを適用するための import。src/board/ui/text.module.css を参照し、クラス名をオブジェクトとして取得する。
 import styles from "../ui/text.module.css";
+// ゾーンキー型を取得するための import。盤面レイアウトで定義した ZoneKey を src/board/layout/zone/model/zonesLayout から参照し、props の型として使用する。
 import type { ZoneKey } from "../layout/zone/model/zonesLayout";
-import { useGameState } from "../state/GameStateContext";
-import { selectCardsInZone } from "../state/selectors";
+// 状態管理の Context フックとセレクターを取得するための import。GameStateProvider が提供する state/dispatch を受け取る useGameState と、ゾーン内カード配列を取り出す selectCardsInZone を src/common/state から使用する。
+import { useGameState, selectCardsInZone } from "../../common/state";
 
 type DeckProps = {
   // どのゾーンを表示するかを示すキーを受け取ります。
