@@ -36,17 +36,13 @@ import { buttonFromPoints } from "../board/layout/button/buttonFromPoints";
 // 各ゾーンフォルダで作ったレイアウトとレンダラーをまとめた配列をここで受け取り、map で描画する。
 import { zones } from "../board/elements/zones/_shared";
 
-// ボタン定義生成関数をインポートする（../board/layout/button/render/buttons の createButtons）。
-// ボタン配置と見た目を生成する処理を外部に分離、App では actions を注入して得られた配列を描画する。
-import { createButtons } from "../board/layout/button/render/buttons";
+// ボタン定義配列生成関数をインポートする（../board/elements/buttons/_shared の createButtons）。
+// 各ボタンフォルダの layout/render/action をまとめた配列を返し、App では依存を注入するだけで描画できる。
+import { createButtons } from "../board/elements/buttons/_shared";
 
 // ゾーンキー生成ヘルパーをインポートする（../board/elements/zones/_shared の makeZoneKey）。
 // ゾーン名から一貫したキーを作る処理をここに委譲し、状態参照や比較で使用する。
 import { makeZoneKey } from "../board/elements/zones/_shared";
-
-// ボタン動作をまとめて生成する関数をインポートする（../board/button/actions/createButtonActions）。
-// クリック時の処理組み立てを外部化し、App では依存関数を注入するだけで済むようにしている。
-import { createButtonActions } from "../board/button/actions/createButtonActions";
 
 // ファイル選択ダイアログを開く関数をインポートする（../board/button/actions/openJsonFile の openTextFile）。
 // ブラウザ API を直接扱う処理を専用モジュールに閉じ込め、App では結果の文字列を受け取ってパースする。
@@ -97,74 +93,14 @@ export default function App() {
   // 第3引数で初期化関数 createInitialGameState を渡し、初回レンダリング時に初期状態を構築する。
   const [state, dispatch] = React.useReducer(gameReducer, undefined, () => createInitialGameState());
 
-  // createButtonActions（../board/button/actions/createButtonActions）を呼び出し、ボタンごとのクリック処理を組み立てる。
-  // 引数には各ボタンの動作をアロー関数で渡す。戻り値は ButtonActions 辞書で、createButtons に注入する。
-  const actions = createButtonActions({
-    // onBack: 戻るボタンの処理。無引数アロー関数で console.log を実行する。クリック時に呼ばれ、"action: back" を出力する。
-    onBack: () => {
-      console.log("action: back");
-    },
-    // onPhase: フェーズ進行ボタンの処理。無引数アロー関数で "action: phase" をログに出す。
-    onPhase: () => {
-      console.log("action: phase");
-    },
-
-    // onImport: インポートボタンの処理。非同期アロー関数として宣言し、ファイル読み込みから状態更新まで行う。
-    // async により Promise を返し、内部で await を使用できる。
-    onImport: async () => {
-      // openTextFile（../board/button/actions/openJsonFile）を呼び出し、JSON 拡張子のみ受け付けるファイル選択ダイアログを開く。
-      // 引数 accept に ".json,application/json" を渡すことで許可する MIME/拡張子を指定する。戻り値は選択したファイルの文字列か null。
-      const text = await openTextFile({ accept: ".json,application/json" });
-      // if 文で text が falsy（null）の場合にログを出し、return で早期終了する。条件分岐は JavaScript の基本構文で、選択キャンセル時の処理を分ける。
-      if (!text) {
-        console.log("import: cancelled");
-        return;
-      }
-
-      try {
-        // parseDeckJson（../board/button/actions/parseDeckJson）を呼び出し、
-        // JSON 文字列を解析して deckName と countsByCardNumber を取得する。
-        // 戻り値は { deckName: string, countsByCardNumber: Record<string, number> } であり、直後の dispatch に利用する。
-        const { deckName, countsByCardNumber } = parseDeckJson(text);
-
-        // dispatch（useReducer が返す状態更新関数）を呼び出し、"IMPORT_DECK" アクションを送出する。
-        // payload にパース結果を渡し、reducer 内で state を更新させる。オブジェクトリテラルは type と payload を持つ。
-        dispatch({
-          type: "IMPORT_DECK",
-          payload: { deckName, countsByCardNumber },
-        });
-
-        // Object.values で countsByCardNumber の値配列を取得し、reduce（Array.prototype.reduce）で合計枚数を算出する。
-        // reduce のコールバック (a, b) => a + b は累積加算を行い、初期値 0 を指定しないため最初の要素が初期値となる。
-        // この合計を total としてログに出す。
-        console.log("import: ok", {
-          deckName,
-          total: Object.values(countsByCardNumber).reduce((a, b) => a + b, 0),
-        });
-      } catch (e) {
-        // try/catch 構文で例外処理を行う。parse や dispatch 中にエラーが発生した場合、catch ブロックでログ出力と alert を行う。
-        console.error("import: failed", e);
-        alert("デッキJSONの読み込みに失敗しました");
-      }
-    },
-
-    // onInitialize: 初期化ボタンの処理。現在はログ出力のみで、将来的に dispatch を追加するためのプレースホルダー。
-    onInitialize: () => {
-      console.log("action: initialize");
-      // 次の段階で、ここで「6枚ドロー」などを dispatch します。
-    },
-
-    // onStatistics: 統計ボタンの処理。state と deckZoneKey をクロージャとして参照し、デッキ名とデッキ枚数をログ出力する。
-    onStatistics: () => {
-      console.log("action: statistics");
-      console.log("deckName:", state.deckName);
-      console.log("deckCount:", state.zones[deckZoneKey].length);
-    },
+  // createButtons（../board/elements/buttons/_shared）を呼び出し、レイアウトと表示とクリック処理を合成した配列を取得する。
+  // state/dispatch/openTextFile/parseDeckJson を依存として渡し、各ボタンフォルダの actionFactory が onClick を構築する。
+  const buttons = createButtons({
+    state,
+    dispatch,
+    openTextFile,
+    parseDeckJson,
   });
-
-  // createButtons（../board/layout/button/render/buttons）を呼び出し、ボタンの見た目とクリック処理を合成した配列を取得する。
-  // actions 辞書を引数に渡し、戻り値の ButtonDef 配列を後続の map で描画する。
-  const buttons = createButtons(actions);
 
   // selectCardIdsInZone（../common/state）で deck ゾーンに含まれるカード ID 配列を取得する。
   // 引数 state は現在のゲーム状態、deckZoneKey は "deck" ゾーンのキー。戻り値を deckCardIds として保持し、長さを計算する。

@@ -10,7 +10,7 @@ type InitializeProps = {
   buttonKey: string;
 };
 
-// Initialize コンポーネント本体。buttonRenderers から呼び出され、ボタンのラベル部分を描画する役割を持つ。
+// Initialize コンポーネント本体。src/board/elements/buttons/initialize/index.tsx の render から呼び出され、ボタンのラベル部分を描画する役割を持つ。
 export function Initialize(_props: InitializeProps) {
   // JSX の div 要素を返し、className に styles.text を指定してテキストスタイルを適用する。
   // children に固定文言「初期化」を配置し、ボタンの内容をユーザーに明示する。クリックハンドラは外部の ButtonFrame で設定されるためここでは扱わない。

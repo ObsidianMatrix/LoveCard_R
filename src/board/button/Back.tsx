@@ -10,7 +10,7 @@ type BackProps = {
   buttonKey: string;
 };
 
-// Back コンポーネント本体。関数宣言で名前付き export し、buttonRenderers（../layout/button/render/buttonRenders.tsx）から呼び出される。
+// Back コンポーネント本体。関数宣言で名前付き export し、src/board/elements/buttons/back/index.tsx の render から呼び出される。
 export function Back(_props: BackProps) {
   // JSX で div 要素を返す。className に styles.text を指定してテキストスタイルを適用し、ラベル文字列「一手戻る」を表示する。
   // イベントハンドラは受け取らず、ButtonFrame 側で onClick が設定されるため、このコンポーネントは純粋な表示のみを担当する。

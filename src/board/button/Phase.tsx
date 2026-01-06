@@ -10,7 +10,7 @@ type PhaseProps = {
   buttonKey: string;
 };
 
-// Phase コンポーネント本体。buttonRenderers から呼び出され、ボタンのラベル部分を描画する役割だけを持つ。
+// Phase コンポーネント本体。src/board/elements/buttons/phase/index.tsx の render から呼び出され、ボタンのラベル部分を描画する役割だけを持つ。
 export function Phase(_props: PhaseProps) {
   // JSX の div 要素を返し、className で styles.text を適用する。子要素には固定文言「フェーズ進行」を配置し、ボタンの意味を明確に示す。
   // onClick は ButtonFrame で設定されるため、このコンポーネントは副作用を持たない純粋表示コンポーネントとして機能する。

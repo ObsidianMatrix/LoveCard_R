@@ -10,7 +10,7 @@ type StatisticsProps = {
   buttonKey: string;
 };
 
-// Statistics コンポーネント本体。buttonRenderers から呼び出され、ボタンラベルを表示する役割だけを持つ。
+// Statistics コンポーネント本体。src/board/elements/buttons/statistics/index.tsx の render から呼び出され、ボタンラベルを表示する役割だけを持つ。
 export function Statistics(_props: StatisticsProps) {
   // JSX の div 要素を返し、className で styles.text を適用する。内部のテキスト「統計情報」でボタンの役割を示す。
   // onClick は ButtonFrame で設定されるため、ここではイベント処理を扱わない純粋表示コンポーネントとなる。

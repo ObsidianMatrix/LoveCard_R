@@ -10,7 +10,7 @@ type ImportProps = {
   buttonKey: string;
 };
 
-// Import コンポーネント本体。buttonRenderers から呼び出され、ボタンのラベル部分を描画する。
+// Import コンポーネント本体。src/board/elements/buttons/import/index.tsx の render から呼び出され、ボタンのラベル部分を描画する。
 export function Import(_props: ImportProps) {
   // JSX の div 要素を返し、className に styles.text を指定してテキストスタイルを適用する。
   // 子要素に固定文言「インポート」を配置し、ボタンの役割をユーザーに伝える。クリック処理は ButtonFrame で設定されるためここでは扱わない。
