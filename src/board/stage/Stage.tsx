@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import styles from "./Stage.module.css";
+import styles from "./stage.module.css";
 
 type StageProps = {
   children: ReactNode;

@@ -1,3 +1,8 @@
+/* ファイル責務: ZoneFrame コンポーネントに適用する見た目を定義する。
+枠線・背景・影・タイトル・内容エリアのスタイルをまとめ、JSX 側からクラスを指定して利用する。 */
+
+/* ゾーン共通の枠スタイル。
+absolute で配置される前提のため position: absolute を設定し、角丸・背景色・影を付ける。 */
 .frame {
   position: absolute;
   border-radius: 12px;
@@ -7,19 +12,23 @@
   overflow: hidden;
 }
 
+/* 点線枠のバリエーション。灰色の 2px dashed ボーダーを適用する。 */
 .dashed {
   border: 2px dashed #9e9e9e;
 }
 
+/* 実線枠のバリエーション。灰色の 2px solid ボーダーを適用する。 */
 .solid {
   border: 2px solid #9e9e9e;
 }
 
+/* 無効化状態の見た目。opacity を下げ、pointer-events: none で操作を無効化する。 */
 .disabled {
   opacity: 0.6;
   pointer-events: none;
 }
 
+/* タイトル表示用スタイル。枠内の左上に固定し、背景を半透明白で読めるようにし、角丸とパディングでバッジ風に整える。 */
 .title {
   position: absolute;
   top: 8px;
@@ -32,6 +41,7 @@
   user-select: none;
 }
 
+/* コンテンツ領域のスタイル。枠全体に広げ（inset:0）、内側余白を設定し、flex で中央揃えする。 */
 .content {
   position: absolute;
   inset: 0;

@@ -1,8 +1,18 @@
-import type { GridPoint, Orientation, RectDef } from "../grid/types";
+// ファイル責務: ラベルのアンカーポイントと段指定から、描画に必要な矩形（中心座標・幅・高さ）を算出する。
+// グリッド計算の共通ヘルパー（computeRectFromPoints）を用い、
+// ラベル特有の高さ・段位置・幅計算をこのファイルに集約する。
+
+// 矩形計算ヘルパーをインポートする。
+// src/common/layout/grid/computeRectFromPoints でアンカー範囲から中心やカードサイズを求める処理を共通化している。
+import { computeRectFromPoints } from "../../../common/layout/grid/computeRectFromPoints";
+// グリッド関連の型をインポートする。
+// GridPoint はアンカー座標、Orientation は向き、RectDef は戻り値となる矩形情報。
+import type { GridPoint, Orientation, RectDef } from "../../../common/layout/grid/types";
+// 段指定に ButtonSlot 型（top/middle/bottom）を使用するため、ボタンのユーティリティから型をインポートする。
 import type { ButtonSlot } from "../button/buttonFromPoints";
 
 /**
- * 点の配列から「ラベルの枠」を作る
+ * 点の配列から「ラベルの枠」を作る。
  * - anchors と slot は button と同じ指定
  * - 段（top/middle/bottom）の位置は「基準高さ（laneH）」で計算する
  * - ラベル自体の高さ（labelH）は別にして、最後に centerY を作る
@@ -26,10 +36,14 @@ export const labelFromPoints = (args: {
   // ここは button の heightRatio と同じ値にするのが基本
   laneHeightRatio?: number;
 
+  // 幅をカード枠全体に合わせるか、カード高さと同じにするかを選ぶ
   widthMode?: "cardHeight" | "cardRectWidth";
 
+  // 上/中/下 の段指定
   slot: ButtonSlot;
 }): RectDef => {
+  // 分割代入で引数を取り出し、デフォルト値を設定する。
+  // heightRatio=1/6, laneHeightRatio=0.25, widthMode="cardHeight" は現状の標準設定。
   const {
     orientation,
     points,
@@ -44,48 +58,32 @@ export const labelFromPoints = (args: {
     slot,
   } = args;
 
-  // pointsが空でも落ちないようにする（通常は1個以上）
-  const safePoints: GridPoint[] = points.length === 0 ? [{ row: 0, col: 0 }] : points;
-
-  // min/max の範囲を作る
-  const rows = safePoints.map((p) => p.row);
-  const cols = safePoints.map((p) => p.col);
-
-  const minRow = Math.min(...rows);
-  const maxRow = Math.max(...rows);
-  const minCol = Math.min(...cols);
-  const maxCol = Math.max(...cols);
-
-  // カード枠の中心X（両端の中心の中点）
-  const minColCenterX = centerXOf(minCol);
-  const maxColCenterX = centerXOf(maxCol);
-  const centerX = `calc((${minColCenterX} + ${maxColCenterX}) / 2)`;
-
-  // カード枠の中心Y（両端の中心の中点）
-  const minRowCenterY = centerYOf(minRow);
-  const maxRowCenterY = centerYOf(maxRow);
-  const cardRectCenterY = `calc((${minRowCenterY} + ${maxRowCenterY}) / 2)`;
-
-  // カードの基本サイズ（1枚分）
-  const { w: cardW, h: cardH } = sizeByOrientation(orientation);
-
-  // anchors範囲の「カード枠」サイズ
-  const colSpan = maxCol - minCol;
-  const rowSpan = maxRow - minRow;
-
+  // computeRectFromPoints を呼び出し、アンカー範囲から中心座標・カードサイズ・スパン数を取得する。
+  // 戻り値には centerX, centerY, cardW, cardH, colSpan, rowSpan が含まれ、
+  // ラベル固有の寸法計算の基礎とする。
+  const { centerX, centerY: cardRectCenterY, cardW, cardH, colSpan, rowSpan } = computeRectFromPoints({
+    orientation,
+    points,
+    centerXOf,
+    centerYOf,
+    sizeByOrientation,
+  });
+  // anchors 範囲を反映した枠サイズを、スパン数と step を用いて計算する。
+  // カード幅/高さにスパンぶんの stepX/stepY を足し込む。
   const cardRectW = `calc(${cardW} + (${stepX} * ${colSpan}))`;
   const cardRectH = `calc(${cardH} + (${stepY} * ${rowSpan}))`;
 
-  // ラベル自身の高さ（見た目）
+  // ラベル自身の高さ（見た目）をカード高さと heightRatio から算出する。
   const labelH = `calc(${cardH} * ${heightRatio})`;
 
-  // 段の基準高さ（ボタンと揃える）
+  // 段の基準高さ（ボタンと揃えるための高さ）を laneHeightRatio で計算する。
   const laneH = `calc(${cardH} * ${laneHeightRatio})`;
 
-  // カード枠の上端
+  // カード枠全体の上端位置を、中心から高さの半分を引いて求める。
   const cardRectTop = `calc(${cardRectCenterY} - (${cardRectH} / 2))`;
 
-  // slot によって「段の上端」を決める（あなた指定の式・laneH基準）
+  // slot の値に応じて段の上端位置を決定する。top/middle/bottom で laneH を足し込み、
+  // 間に 1/3 の隙間を設ける。
   const laneTop =
     slot === "top"
       ? cardRectTop
@@ -93,10 +91,14 @@ export const labelFromPoints = (args: {
         ? `calc(${cardRectTop} + ${laneH} + (${laneH} / 3))`
         : `calc(${cardRectTop} + (${laneH} * 2) + ((${laneH} / 3) * 2))`;
 
-  // RectDef は中心Yが必要なので「段の上端 + ラベル高さ/2」
+  // RectDef に必要な中心Yを算出する。段の上端にラベル高さの半分を足し、ラベル矩形の中心を得る。
   const centerY = `calc(${laneTop} + (${labelH} / 2))`;
 
+  // 幅は widthMode により選択する。cardRectWidth を選ぶとアンカー範囲全体の幅、
+  // cardHeight ならカード高さと同じ幅になる。
   const width = widthMode === "cardRectWidth" ? cardRectW : cardH;
 
+  // 矩形情報を RectDef として返す。centerX は computeRectFromPoints の結果をそのまま使用し、
+  // height は labelH を適用する。
   return { centerX, centerY, width, height: labelH };
 };

@@ -1,0 +1,1243 @@
+LoveCard_R 仕様書（統合完全版・最終実装確定：peek統一・デッキ末尾トップ版）レビュー高速版
+
+---
+
+## 1. 用語集（Glossary）
+
+### 1.1 基本用語
+
+* **CardId**：カード実体のID（string）。
+* **ZoneKey**：`${kind}:${slot}` 形式のキー。kind と slot の組を一意に表す。
+* **ZoneState**：`{ ids: CardId[] }`。
+  **重要**：zones は必ず `Record<ZoneKey, ZoneState>`。直配列 `Record<ZoneKey, CardId[]>` は廃止。参照/更新は必ず `zones[key].ids`。
+* **zones**：カードの配置を表す唯一の正（カード実体は zone を持たない）。
+* **cardsById**：カード実体の辞書（配置は zones、属性は cardsById）。
+* **トップ（deck top）**：`deck:single.ids` / `energyDeck:single.ids` の**配列末尾**。取り出しは `pop()`。
+* **ボトム（deck bottom）**：配列先頭。戻しは `unshift()`。
+* **シャッフル**：Fisher–Yates（配列全体）。
+* **deckHeadIndex**：完全廃止。GameState / ZoneState に headIndex 系は存在しない。
+
+### 1.2 表示・UI関連
+
+* **束表示**：カード個別画像を並べず、束の見た目で表示すること。
+* **裏面表示**：採用しない（カード裏画像は扱わない）。束表示と表表示のみ。
+* **モーダル**：statistics/search/detail/resolution/waiting/pending を表示するドラッグ可能UI。
+  **重要**：costConfirm/batonConfirm は「モーダルではない」（ゾーン内ボタン生成方式）。
+* **resolution**：Zoneではない。候補一覧表示（peek統一）。
+  → `resolutionItems` と `resolutionOpen` で表現。zones に resolution:* は存在しない。
+* **pending（エールモーダル）**：Zoneではない。表示専用。`pendingItems` と `pendingModalOpen` で表現。当たり判定を持たない。
+* **peek統一**：候補表示は参照のみ（元ゾーンに実体が残る）。移動確定時のみ元から削除。
+
+### 1.3 フェーズ関連
+
+* **phase**：ゲーム進行状態。
+* **turn**：ターン番号（開始前0、マリガン確定後1）。
+* **phaseRules / forbidCardDrag**：phase をキーに導出する入力制限。inputLock を state に保持しない。
+* **overlay入力制限**：resolutionOpen / pendingModalOpen が優先する入力制限（phaseRulesより優先）。
+
+### 1.4 コスト・バトン
+
+* **energy（エネルギー）**：`energyStorage:single` にカードとして保持。1枚=1コスト。支払いで横向き（isUpright=false）。横向きは当ターン追加支払い不可。
+* **neededEnergy（必要コスト）**：手札→member の配置やバトンで必要になる支払枚数。
+* **コスト不足確認（costConfirm）**：needed > usableEnergyCount のとき発生。Yes は「完全0コスト（タップ無し）」。
+* **バトン（交換）**：手札→member:* で既存カードがあるときの交換。必要コストは差分方式：`needed = max(0, newCost - oldCost)`。
+* **バトン禁止条件**：`playedTurn === turn`。該当時は batonConfirm（ゾーン内 Yes/No）を出す。
+
+---
+
+## 2. データ（JSONスキーマ / 型仕様）
+
+### 2.1 ID型
+
+* `type CardId = string`
+
+### 2.2 ZoneKey / ZoneState
+
+#### 2.2.1 ZoneKey
+
+* 形式：`${kind}:${slot}`
+* kind：
+
+  * `deck / discard / energyDeck / energyStorage / hand / successLive / live / member`
+* slot：
+
+  * `single / left / center / right`
+
+#### 2.2.2 使用するゾーン一覧（確定）
+
+* `deck:single`
+* `discard:single`
+* `energyDeck:single`
+* `energyStorage:single`
+* `hand:single`
+* `successLive:single`
+* `live:right / live:center / live:left`
+* `member:right / member:center / member:left`
+* **注意**：resolution と pending は Zone ではない（zones に存在しない）
+
+#### 2.2.3 ZoneState
+
+* `type ZoneState = { ids: CardId[] }`
+
+### 2.3 CardMaster（カードマスタ）
+
+#### 2.3.1 保存形
+
+* `cardMasterByNumber: Record<string, CardMaster>`
+
+#### 2.3.2 共通フィールド（確定）
+
+* `card_number: string`
+* `name: string`
+* `card_kind: "メンバー" | "ライブ"`
+* `work_title: string`
+* `unit_name: string`
+* `rare: string`
+* `image_url: string`
+
+#### 2.3.3 メンバーカード参照フィールド（確定・int化して使う）
+
+* `cost: string | number`
+* `heart: Record<string, string | number>`（色キー→数）
+* `blade: string | number`
+* `blade_count: string | number`
+* `blade_heart: Record<string, string | number>`
+* 色キー許容。特殊キー：`all, draw`
+
+#### 2.3.4 ライブカード参照フィールド（確定・int化して使う）
+
+* `heart: Record<string, string | number>`（必要ハート）
+* `blade_heart: Record<string, string | number>`（特殊キー：`all, draw, score`）
+* `direction: string | number`（score扱いに優先利用）
+* `score: string | number`
+* score は `direction` を優先、無ければ `blade_heart.score`
+
+### 2.4 CardEntity（カード実体）
+
+* カード実体は zone を持たない（配置は zones が持つ）。
+* 必須フィールド：
+
+  * `id: CardId`
+  * `kind: "normal" | "energy"`
+  * `cardNumber: string`（kind="normal" のみ必須）
+  * `isUpright: boolean`
+  * `energy: number`（energyカードは常に1扱いでよい）
+  * `playedTurn?: number`（必要なら保持）
+* 補足運用ルール（確定）：
+
+  * エネルギーは支払いに使ったら `isUpright=false`
+  * メンバーも NORMAL_ACTIVE で縦戻し（`isUpright=true`）
+  * `member:*` に配置確定した瞬間 `playedTurn = turn`
+  * `member:*` から外れた瞬間 `playedTurn` をリセット（undefined）
+
+### 2.5 ResolutionItem（peek統一・確定）
+
+* resolution は Zone ではなく仮置き場（候補表示）
+* `type ResolutionItem = { cardId: CardId; sourceZoneKey: ZoneKey }`
+* 重要：
+
+  * mode（peek/take）は存在しない
+  * index（元インデックス）も存在しない
+  * すべて peek（参照）であり、カード実体は常に zones 側に存在
+
+### 2.6 SearchInputs（確定）
+
+* `text: string`（名前/カード番号の部分一致）
+* `cardKind: "メンバー" | "ライブ" | "any"`
+* `workTitle: string`
+* `unitName: string`
+* `rare: string`
+* `costMin: number | null`
+* `costMax: number | null`
+* `bladeMin: number | null`
+* `bladeMax: number | null`
+* `heartMin: Record<string, number>`
+* `heartMax: Record<string, number>`
+* text 一致：小文字化して部分一致、前後空白は trim
+* card_number は部分一致のみ
+* heartMin/Max のキー：デッキ内カードマスタに存在する色キーのみ（UIで一覧化）
+
+### 2.7 PendingItems（確定）
+
+* `pendingItems: CardId[]`（エールモーダル表示専用リスト）
+
+### 2.8 PendingMove（移動保留）（確定）
+
+* `cardId: CardId`
+* `fromZoneKey: ZoneKey`
+* `fromIndex: number`（拒否時に元インデックスへ戻すため必須）
+* `toZoneKey: ZoneKey`
+* `kind: "normal" | "baton"`
+* `neededEnergy: number`
+* `newCardCost: number`（kind に関わらず必須）
+* `oldCardId?: CardId`（kind="baton" の場合必須）
+* `oldCardCost?: number`（kind="baton" の場合必須）
+
+### 2.9 CostConfirmState / BatonConfirmState（確定）
+
+* `CostConfirmState = { type: "cost" }`
+* `BatonConfirmState = { type: "baton" }`
+* どちらも pendingMove の存在を前提にし、詳細は pendingMove を唯一のソースとする
+
+### 2.10 SnapEntry（Undo対象の完全保持）（確定）
+
+#### 2.10.1 Undo対象（完全保持）
+
+* `zones`
+* `cardsById`
+* `phase`
+* `turn`
+* `message`
+* `messageTimer`
+* `statsBladeOverrideEnabled`
+* `statsBladeOverrideValue`
+* `deckStarted`
+
+#### 2.10.2 Undo対象外（確定）
+
+* UI状態（メニュー/モーダル/confirm/pendingMove/resolutionItems/pendingItems 等）
+* drag/clickTarget/dragMoved
+
+### 2.11 デッキインポートJSON形式（確定）
+
+* `Array<{ name: string; cards: Record<string, string> }>`
+* cards の値は文字列として受け取り、int化できるものはint化する
+
+---
+
+## 3. 画面構成（ゾーン / ボタン / ラベル / コンポーネント）
+
+### 3.1 システム概要（UI観点）
+
+* LoveCard の盤面UI＋進行＋操作を提供するフロントエンド
+* 技術：Vite + React + TypeScript（React 19）
+* 状態：useReducer + Context
+* 位置（座標）は原則 GameState に保持しない（導出表示）
+* 例外：ドラッグ中だけ drag 状態から表示位置導出
+
+### 3.2 レイアウト基盤（確定）
+
+* rows=4, cols=5 グリッド基準
+* 右上を (row=0, col=0)
+* row は上→下に増加
+* col は右→左に増加
+* 各セル中心座標から rect を作り、ゾーン/ボタン/ラベル配置
+* 計算上も右上原点を厳守
+
+### 3.3 カードサイズ（確定）
+
+* 縦横比：1024/1429
+* 縦向き高さ：20vh
+* 横向き：rotate でも width/height交換でも可（見た目一致なら可）
+* CardEntity.isUpright：true=縦、false=横
+
+### 3.4 グリッド配置一覧（現行実装準拠）
+
+#### 3.4.1 ゾーン配置（row,col は右上(0,0)）
+
+* deck:single = (0,0)
+* discard:single = (1,0)
+* energyDeck:single = (2,0)
+* energyStorage:single = (2,1)-(2,3)
+* hand:single = (3,0)-(3,3)
+* live:right = (0,1)
+* live:center = (0,2)
+* live:left = (0,3)
+* member:right = (1,1)
+* member:center = (1,2)
+* member:left = (1,3)
+* successLive:single = (0,4)-(1,4)
+* pending は Zone ではない（エールモーダル表示専用、当たり判定なし）
+
+#### 3.4.2 ボタン配置（row,col + slot）
+
+* back = (2,4) slot=top
+* phase = (2,4) slot=middle
+* statistics = (2,4) slot=bottom
+* initialize = (3,4) slot=top
+* import = (3,4) slot=middle
+
+#### 3.4.3 ラベル配置
+
+* phaseLabel = (3,4) slot=bottom
+
+### 3.5 UIコンポーネント仕様（確定）
+
+* Stage：盤面土台。子要素（ゾーン/カード/ボタン/ラベル/モーダル等）を重ね配置可。
+* ZoneFrame：一般ゾーン枠
+* DeckZoneFrame：束表示＋右クリックメニュー起点（deck:single、energyDeck:single）
+* ButtonFrame：ボタン描画＋クリック領域
+* LabelFrame：ラベル描画
+* Modal（汎用）：
+
+  * statistics/search/detail/resolution/waiting を表示可
+  * ドラッグ移動可、画面外に出たら画面内へ収める
+  * モーダル全体をドラッグ可能、クリックで最前面へ
+* 重要：costConfirm / batonConfirm はモーダルではない（ゾーン内ボタン生成）
+
+### 3.6 カード/束表示（確定）
+
+* deck:single と energyDeck:single：束として描画（個別画像は表示しない）
+* discard:single：束表示＋最上段カード画像を代表として1枚だけ表示
+* その他ゾーン：常に表（画像）を表示
+* energyカード(kind="energy")：画像がないため簡易表示（例「ENERGY」）
+* 画像ロード失敗：
+
+  * プレースホルダー表示
+  * console.warn 出力
+* 裏面表示は一切行わない
+* 画像参照：`img src=image_url`（必要なら loading="lazy" 可）
+
+### 3.7 均等配置（確定）
+
+* 対象：hand:single / energyStorage:single / successLive:single / resolution
+* ルール：
+
+  * 枚数変化ごとに再計算
+  * 1枚：中央
+  * 2枚：左右
+  * 3枚以上：左右基準点間を等分して中心配置
+  * 手札へ入る場合：「最も近い配置点＋左右判定」で挿入位置決定
+* 配列順と表示順：
+
+  * ids の並び順は画面の左→右表示順と一致
+  * 対象：hand / energyStorage / successLive / resolution
+  * discard は束表示のため ids 末尾を最上段として扱う
+
+### 3.8 assemble責務分離（確定）
+
+* ゾーン/ボタン/ラベルは「定義」＋「座標計算（rect付与）」で組み立てる
+* App は rect 付き配列を受け描画のみ
+* assembleZones：
+
+  * deck:single と energyDeck:single は DeckZoneFrame
+  * その他は ZoneFrame
+* assembleButtons：
+
+  * createButtons で content/onClick 生成
+  * buttonFromPoints で rect 付与
+* assembleLabels：
+
+  * 定義に rect 付与して返す
+
+### 3.9 画面左上表示（確定）
+
+* deckName
+* deckCount（`zones["deck:single"].ids.length` と一致）
+
+---
+
+## 4. 状態（GameState相当：Undo対象/対象外）
+
+### 4.1 技術スタック・永続化（確定）
+
+* フロント：React 19 / TypeScript / Vite
+* 状態：useReducer + Context
+* 永続化：
+
+  * localStorage：ETag（キー cards_etag）
+  * IndexedDB：復号済み cardMaster
+
+### 4.2 GameState（確定）
+
+#### 4.2.1 コア状態（Undo対象）
+
+* deckName: string | null
+* zones: Record<ZoneKey, ZoneState>
+* cardsById: Record<CardId, CardEntity>
+* turn: number
+* phase: PhaseKey
+* message: string
+* messageTimer: number（ms、UIフレーム更新で減算して0で消す）
+* snapHistory: SnapEntry[]
+* statsBladeOverrideEnabled: boolean
+* statsBladeOverrideValue: number
+* deckStarted: boolean（開始処理一回だけ用）
+
+#### 4.2.2 UI状態（Undo対象外）
+
+* 右クリックメニュー：
+
+  * deckMenuOpen: boolean
+  * deckMenuCount: number
+  * energyMenuOpen: boolean
+  * energyMenuCount: number
+* モーダル：
+
+  * statsModalOpen / statsModalPos
+  * searchModalOpen / searchModalPos / searchInputs
+  * detailModalOpen / detailModalPos / detailCardId
+  * resolutionOpen / resolutionModalPos / resolutionItems
+  * waitingModalOpen / waitingModalPos
+  * pendingModalOpen / pendingModalPos / pendingItems
+* confirm（モーダルではないが状態として保持）：
+
+  * costConfirm: CostConfirmState | null
+  * batonConfirm: BatonConfirmState | null
+  * pendingMove: PendingMove | null
+
+#### 4.2.3 一時入力状態（Undo対象外）
+
+* drag: null | { cardId; start; offset }
+* clickTarget: null | { kind: "card" | "zone" | "button" | "modal"; id: string }
+* dragMoved: boolean
+
+#### 4.2.4 Undoの原則（確定）
+
+* Undo は盤面状態（コア）だけ復元し、UI/入力状態は含めない
+* Undo 実行時は UI状態を初期化（メニュー/モーダル/confirm/pendingMove/resolutionItems/pendingItems を閉じる）
+
+### 4.3 inputLock保持方針（確定）
+
+* inputLock を GameState に保持しない
+* phase をキーにしたテーブルから導出
+
+### 4.4 statisticsの特例（確定）
+
+* statistics は常時操作可能（どの制限にも影響されない）
+* statistics が開いていて他操作をブロックしてはならない
+* 上書き値はリアルタイム反映（LIVE_PERFORMANCE中でも変更即反映）
+
+---
+
+## 5. 操作（入力 → 状態変化 → 描画反映）
+
+> ここは「何が押せる/できる」「状態がどう変わる」「見た目がどうなる」を必ずセットで書きます。
+
+### 5.1 共通入力制限（overlay優先）
+
+* `resolutionOpen` と `pendingModalOpen` は同時 true にしない
+* pendingModalOpen=true の間、resolutionOpen を開かない（新規開閉は無視）
+* resolutionOpen=true の間、resolutionItems を更新する操作は行わない（無視）
+* pointerdown：ロック判定で弾く
+* pointermove/up：ドラッグ中のみグローバルで拾う
+* ドロップ判定：pointerup 時にゾーンrectヒットテスト
+* contextmenu：常に preventDefault、禁止状態では何もしない
+* pendingModalOpen=true の間：ドラッグ開始を一律禁止
+* resolutionOpen=true の間：resolutionItems 由来カードのみドラッグ開始可、確定先は hand:single のみ
+* resolution は Zone ではないため「resolutionにドロップ」は存在しない
+
+#### 5.1.1 オーバーレイ状態ごとの許可/禁止（確定表）
+
+| 状態                    | 操作許可                                                                | 操作禁止                                                                                    | 備考                       |
+| --------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------ |
+| resolutionOpen=true   | statistics モーダル操作 / resolutionItems のドラッグ開始 / resolution モーダル内ボタン操作 | 他ゾーンのカード操作 / phase ボタン / 右クリック / resolutionItems 以外のカードドラッグ / deck/energyDeck 右クリックメニュー | ドロップ判定は hand:single のみ有効 |
+| pendingModalOpen=true | statistics モーダル操作のみ                                                 | 他ゾーンのカード操作 / phase ボタン / 右クリック / すべてのカードドラッグ / deck/energyDeck 右クリックメニュー                | ドロップ判定は発生しない             |
+| どちらも false            | 通常操作                                                                | 通常制約のみ                                                                                  | phaseRules を適用           |
+
+### 5.2 ボタン操作
+
+#### 5.2.1 back（Undo）
+
+* 入力：backクリック
+* 前提：snapHistory が空なら何もしない
+* 状態：
+
+  * snapHistory 末尾を1件取り出し復元
+  * UI状態は初期化（メニュー/モーダル/confirm/pendingMove/resolutionItems/pendingItems を閉じる）
+* 履歴全消去タイミング：IMPORT_DECK_SUCCESS / RESET_GAME_FULL
+* 描画：復元後の zones/cardsById/phase/turn/message で再描画
+
+#### 5.2.2 phase（フェーズ進行）
+
+* 入力：phaseクリック
+* 押下可能条件：
+
+  * **resolutionOpen または pendingModalOpen が true の間は無効**
+* 挙動：
+
+  * 1クリックで必要な自動遷移をまとめて進めてもよい（結果同一）
+  * 将来アニメ対応のため「まとめAction」でも「分割Action」でも成立する設計
+* 描画：phase/turn/自動処理結果で更新
+
+#### 5.2.3 statistics
+
+* 入力：statisticsクリック
+* 状態：statsModalOpen=true
+* 表示（最低限）：
+
+  * デッキ総数：`zones["deck:single"].ids.length`
+  * 控室総数：`zones["discard:single"].ids.length`
+* 特例：常時操作可能、他制限を受けない（開いても他操作をブロックしない）
+* 描画：モーダル表示、値はリアルタイム更新
+
+#### 5.2.4 initialize
+
+* 入力：initializeクリック
+* 状態：RESET_GAME_FULL を dispatch、初期状態へ戻す
+* 描画：初期盤面
+
+#### 5.2.5 import
+
+* 入力：importクリック→JSON選択
+* 成功：読み込み→parseDeckJson→IMPORT_DECK_SUCCESS
+* キャンセル：何もしない（ログのみ）
+* 失敗：console.error と alert
+* IMPORT_DECK_SUCCESS 時の状態（確定）：
+
+  * 状態初期化、デッキ名とカード実体再生成
+  * deck:single.ids にカードID格納、cardsById登録
+  * snapHistory=[]
+  * phase=GAME_SETUP_READY
+  * turn=0
+  * deckStarted=false
+  * mulliganSelected/mulliganBuffer を採用するならクリア
+  * energyDeck:single に energyカード16枚生成投入
+  * energyStorage:single は空
+  * resolutionItems=[]
+  * resolutionOpen=false
+* 描画：左上の deckName/deckCount を含め再描画
+
+### 5.3 右クリック操作
+
+#### 5.3.1 カード向き変更（isUprightトグル）
+
+* 入力：カード右クリック（contextmenu）
+* 対象：
+
+  * deck/energyDeck：右クリックはメニュー（向き変更しない）
+  * その他カード：右クリックで向き変更
+* 禁止：
+
+  * resolutionOpen または pendingModalOpen 中は右クリック操作は発生しない（全面禁止）
+* 付記：contextmenu 既定動作を preventDefault して処理
+
+#### 5.3.2 デッキ右クリックメニュー（deck:single）
+
+* 入力：deck:single 右クリック
+* 選択肢：
+
+  * 上からn枚表示（resolution）
+  * サーチ（search→resolution）
+  * n枚ドロー
+  * / -（n増減）
+* n：
+
+  * 初期=1、最小=1、+/- は1ずつ
+  * 最大上限なし（実行時に残量で打ち切り）
+* bottom系は実装しない
+* 閉じ方（確定）：
+
+  * ESC
+  * 同じゾーン再右クリック
+  * ゾーン外クリック
+  * ESC は window keydown で捕捉し解除も行う
+* overlay中禁止：
+
+  * resolutionOpen / pendingModalOpen 中は deck/energyDeck メニュー操作自体が禁止
+
+##### (a) 上からn枚表示（peek）
+
+* 対象：デッキトップからn枚（トップ=末尾）
+* 表示だけではデッキから削除しない（peek）
+* resolution上で移動確定したカードのみ、元のデッキから削除される
+
+##### (b) サーチ
+
+* searchモーダルで条件入力
+* 条件一致カードを resolution に表示
+* サーチ結果も peek（元デッキに残る参照表示）
+
+##### (c) n枚ドロー
+
+* n回繰り返し：
+
+  * トップから1枚 pop → handへ移動
+  * デッキが空なら停止
+* 手札は都度再配置（均等配置再計算）
+
+#### 5.3.3 エネルギーデッキ右クリックメニュー（energyDeck:single）
+
+* 入力：energyDeck:single 右クリック
+* 選択肢：
+
+  * n枚供給（energyStorageへ）
+  * / -（n増減）
+* n：
+
+  * 初期=1、最小=1、+/- は1ずつ
+  * 最大上限なし（実行時に残量で打ち切り）
+* 供給：energyDeckトップ=pop で残量まで
+
+### 5.4 モーダル操作
+
+#### 5.4.1 汎用モーダル
+
+* 対象：statistics / search / detail / resolution / waiting
+* ドラッグ移動可能、画面外は画面内へ収める
+* クリック時最前面へ
+
+#### 5.4.2 statistics モーダル
+
+* 常時操作可能（制限されない）
+
+#### 5.4.3 detail（虫眼鏡）
+
+* 入力：カード右下の虫眼鏡ボタンを左クリック
+* 対象外：
+
+  * deck束（deck:single）
+  * energy束（energyDeck:single）
+  * energyカード
+* 表示内容（縦並び行リスト）：
+
+  * メンバー：名前/カードタイプ/作品名/参加ユニット/コスト/基本ハート/ブレードハート/ブレード
+  * ライブ：名前/カードタイプ(ライブ)/作品名/スコア/必要ハート/ブレードハート/ブレード
+  * ハート類：色:数 をカンマ区切り
+
+#### 5.4.4 waiting モーダル
+
+* カードマスタ更新など非同期処理中の進行表示に使用可
+
+### 5.5 resolution 操作（peek統一）
+
+#### 5.5.1 resolution の目的
+
+* サーチ、上からn枚表示、エールなど一覧が必要な処理で共通使用
+
+#### 5.5.2 表示仕様
+
+* 一覧表示、収まらなければスクロール可
+* モーダルドラッグ移動可
+* resolutionItems は開くたび全置換（追記しない）
+* resolutionItems のカードは常に元zonesに存在（peek）
+
+#### 5.5.3 resolution からの移動（確定フロー）
+
+* resolutionItems に含まれるカードをドラッグ&ドロップで他ゾーンへ移動できる
+* 自動クローズ：
+
+  * resolutionItems が空になったら reducer 側で resolutionOpen=false
+* resolutionOpen=true の間：
+
+  * resolutionItems を更新しない
+  * 入力制限は overlay表に従う（hand:single への確定のみ許可）
+
+##### (a) ドロップ確定（13.7.1相当）
+
+確定した場合：
+
+1. zones[sourceZoneKey].ids から cardId を削除（idで削除）
+2. 移動先ゾーン ids に cardId を追加
+3. resolutionItems から該当 item を削除
+
+##### (b) 拒否（13.7.2相当）
+
+* resolutionItems：変更しない
+* zones：変更しない
+* 見た目上 resolution に残る
+
+##### (c) 下部ボタン：元の場所に戻す（13.7.3）
+
+* peek統一のためカード移動は行わない
+* 最後に：
+
+  * resolutionItems=[]
+  * resolutionOpen=false
+
+##### (d) 下部ボタン：すべて控室に送る（13.7.4）
+
+resolutionItems 全 cardId について：
+
+1. zones[sourceZoneKey].ids から cardId を削除
+2. discard:single.ids に追加
+   最後に：
+
+* resolutionItems=[]
+* resolutionOpen=false
+
+### 5.6 pending（エールモーダル）操作
+
+* pendingItems にあるカードを一覧表示
+* 表示順は pendingItems の配列順
+* pendingItems は表示専用で当たり判定を持たない
+* ドラッグ不可、右クリック不可
+* phaseボタン無効、他ゾーン操作不可、ドロップ判定なし
+* LIVE_JUDGE 開始時に pendingModalOpen=false
+* エール終了で pendingItems を空にし pendingModalOpen=false
+* yellItems は存在しない（廃止）。エール対象は pendingItems を正とする
+
+### 5.7 ドラッグ&ドロップ（通常時）
+
+#### 5.7.1 ドラッグ開始禁止ゾーン
+
+* deck:single
+* discard:single
+* energyDeck:single
+
+#### 5.7.2 ドロップ先判定（28.2相当）
+
+* pointerup時、カード中心点がゾーンrect内ならそのゾーン採用
+* どのゾーンにも当たらなければキャンセル
+
+#### 5.7.3 ゾーン外ドロップ
+
+* キャンセルして元ゾーン元インデックスへ戻す
+
+#### 5.7.4 デッキ系へのドロップ禁止
+
+* deck:single と energyDeck:single へ入れる移動は常に拒否
+
+#### 5.7.5 種別制約
+
+* member:* にはライブカード不可（拒否して戻す）
+* successLive にはメンバーカード不可（拒否して戻す）
+
+#### 5.7.6 拒否時の戻し
+
+* 拒否された場合は必ず「元ゾーンの元インデックス」へ戻す
+* resolution由来で拒否の場合は zones/resolutionItems を変えない（見た目上 resolution に残る）
+
+### 5.8 member:* への配置（バトン・コスト・確定）（28.3統合）
+
+#### 5.8.1 前提：member制約
+
+* member:right/center/left は最大1枚
+* memberにはメンバーカードのみ
+* 入れ替えはメンバー同士のみ
+* バトンは「手札→member:* で既存カードがある場合」の特殊処理
+
+#### 5.8.2 手札→member:* 確定フロー（確定順序）
+
+1. 既存カードがあればバトン候補
+
+* 禁止条件（playedTurn===turn）に該当すれば batonConfirm を表示（ゾーン内Yes/No）
+
+  * テキスト：「このターンに出たカードですが出しますか？」
+  * Yes：続行、No：キャンセル（何も変えない）
+* needed は差分方式：`needed = max(0, newCost - oldCost)`
+* この時点で pendingMove を作成して保持
+
+2. コスト不足判定
+
+* usableEnergyCount = energyStorage 内の isUpright=true 枚数
+* needed > usableEnergyCount の場合 costConfirm 表示（ゾーン内Yes/No）
+
+  * テキスト：「0コストで出しますか？」
+  * Yes：完全0コストで確定（energyタップ無し、isUpright変更無し）
+  * No：pendingMove破棄、何も変えない
+
+3. 足りる場合の支払い
+
+* energyStorage から needed 枚ぶんを支払いとして isUpright=false にする
+* 支払い順：UI左から順（ids[0]が最左）
+* 実装上は「先頭側から縦向きを needed 枚選ぶ」方式でよい
+* 最終的に「支払った枚数ぶん縦→横」になっていれば正
+
+4. 確定直前に既存カードがあれば discardへ
+
+* member:* 既存カードを discard:single に移動（バトン確定の順序）
+
+5. 新カード配置
+
+* 新カードを member:* に配置確定（最大1枚）
+* member:* に配置確定した瞬間 playedTurn=turn
+* hand 以外から member:* へ移動する場合はコスト発生させない
+* discard から member:* は discard を resolution に展開して行う
+* discard→member:* も playedTurn を turn で更新
+
+#### 5.8.3 member:* 間の移動（確定）
+
+* member:* 間の移動は許可
+* 移動元と移動先の両方にカードがある場合は入れ替える
+* 入れ替え時：
+
+  * コストは発生しない
+  * playedTurn は元カードの値を引き継ぐ
+  * バトン扱いにしない（confirmもコストも不要）
+
+### 5.9 live / successLive / その他ゾーンへの移動
+
+#### 5.9.1 live 制約（再掲）
+
+* live:right/center/left は最大1枚
+* 既にカードがあるゾーンへ移動は拒否
+* 種別制約なし（何でも置ける）
+* LIVE_PERFORMANCE でライブ以外が自動で控室へ送られる
+
+#### 5.9.2 successLive 制約
+
+* successLive:single はライブカードのみ
+* メンバーは拒否
+* 最大3枚、4枚目は拒否
+
+#### 5.9.3 その他ゾーン移動（28.4）
+
+* 制約違反（種別/最大枚数/デッキ系ドロップ）なら拒否して元へ
+* OKなら zone 間移動確定
+
+### 5.10 メニュー・モーダル以外の操作でSnapを積む（Undo履歴）
+
+* コア状態が変わる直前に必ず push：
+
+  * カード移動確定
+  * フェーズ進行の自動処理（ドロー/供給/縦戻し等）
+  * 右クリック向き変更
+  * メニュー操作の n増減
+  * stats上書き変更
+* 対象外：
+
+  * モーダル開閉/位置変更など表示のみ
+
+### 5.11 リサイズ時操作（確定）
+
+* リサイズ中にドラッグが発生していたらドラッグキャンセル（確定しない）
+* カードは元ゾーン元インデックスへ戻る
+* resolutionItems のカードをドラッグ中にリサイズ：
+
+  * resolutionItems=[]
+  * resolutionOpen=false
+  * 掴んでいたカードのドラッグ解除
+* resolution由来判定：cardId が resolutionItems に含まれるか
+* 再計算：
+
+  * カードサイズ/ゾーンrect/ボタンrect/ラベルrect
+  * 均等配置：hand/energyStorage/successLive/resolution を必ずやり直す
+  * モーダル位置は保持して良いが画面外なら画面内へ収める
+
+---
+
+## 6. フェーズ遷移図（押下可能条件込み）
+
+### 6.1 フェーズ一覧（確定）
+
+* GAME_SETUP_READY
+* MULLIGAN
+* NORMAL_ACTIVE
+* NORMAL_ENERGY
+* NORMAL_DRAW
+* NORMAL_MAIN
+* LIVE_SETUP_IN_PROGRESS
+* LIVE_SETUP_DONE
+* LIVE_PERFORMANCE
+* LIVE_JUDGE
+* TURN_END
+
+### 6.2 phaseボタン押下可能条件（確定）
+
+* `resolutionOpen=true` または `pendingModalOpen=true` の間、phaseボタンは無効（押せない/反応しない）
+
+### 6.3 遷移（確定：1クリックでまとめてもよいが結果同じ）
+
+```
+GAME_SETUP_READY
+  └─(phase押下 / 開始処理が済んでなければ開始)→ MULLIGAN
+MULLIGAN
+  └─(マリガン確定)→ NORMAL_ACTIVE
+NORMAL_ACTIVE →(自動) NORMAL_ENERGY →(自動) NORMAL_DRAW →(自動) NORMAL_MAIN
+NORMAL_MAIN
+  └─(phase押下)→ LIVE_SETUP_IN_PROGRESS
+LIVE_SETUP_IN_PROGRESS
+  └─(phase押下)→ LIVE_SETUP_DONE
+LIVE_SETUP_DONE →(自動) LIVE_PERFORMANCE →(自動) LIVE_JUDGE
+LIVE_JUDGE
+  └─(phase押下)→ TURN_END
+TURN_END →(自動) 次ターン NORMAL_ACTIVE
+```
+
+### 6.4 各フェーズの処理（確定）
+
+#### 6.4.1 ゲーム開始（GAME_SETUP_READY→MULLIGAN で1回だけ）
+
+* deckStarted=false のとき1回だけ：
+
+  * 通常デッキをシャッフル（Fisher–Yates、配列全体）
+  * 初期手札：6枚ドロー（トップ=末尾、pop）
+  * phase=MULLIGAN
+  * deckStarted=true
+
+#### 6.4.2 MULLIGAN（確定）
+
+* マリガン選択：手札カードをクリックでトグル選択
+* マリガン中はドラッグ禁止（forbidCardDrag=true）
+* 確定処理：
+
+  * 選択カードを手札から除外しバッファへ
+  * 選択枚数分、デッキトップからドローして手札へ（pop）
+  * バッファカードをデッキボトムへ戻す（unshift）
+  * デッキを再シャッフル（Fisher–Yates）
+  * エネルギー供給：energyDeck→energyStorageへ3枚（残量まで、pop）
+  * turn=1
+  * phase=NORMAL_ACTIVE
+
+#### 6.4.3 NORMAL_ACTIVE（確定）
+
+* phase=NORMAL_ACTIVE
+* 縦戻し：
+
+  * energyStorage 内：全energyカード isUpright=true
+  * member:* 内：全カード isUpright=true
+* 自動遷移：NORMAL_ENERGY
+
+#### 6.4.4 NORMAL_ENERGY（確定）
+
+* phase=NORMAL_ENERGY
+* energyDeck→energyStorageへ1枚供給（残量まで、pop）
+* 自動遷移：NORMAL_DRAW
+
+#### 6.4.5 NORMAL_DRAW（確定）
+
+* phase=NORMAL_DRAW
+* 通常ドロー：トップから1枚→hand（pop、空なら何もしない）
+* 自動遷移：NORMAL_MAIN
+
+#### 6.4.6 NORMAL_MAIN（確定）
+
+* phase=NORMAL_MAIN
+* 自由行動：
+
+  * ドラッグでゾーン移動（制約/コスト/バトン適用）
+  * 右クリック（向き変更、deck/energyDeck はメニュー）
+* phaseボタンで LIVE_SETUP_IN_PROGRESS
+
+#### 6.4.7 LIVE_SETUP_IN_PROGRESS（確定）
+
+* phase=LIVE_SETUP_IN_PROGRESS
+* live:* への配置許可（最大1枚×3）
+* live:* は何でも置ける（種別制約なし）
+* LIVE_SETUP_IN_PROGRESS 中は live:* から他ゾーンへの移動も許可
+* phaseボタンで LIVE_SETUP_DONE
+
+#### 6.4.8 LIVE_SETUP_DONE（確定）
+
+* phase=LIVE_SETUP_DONE
+* 自動処理：
+
+  * liveCount = live:right/center/left のカード枚数
+  * liveCount 回、通常ドロー（top→hand、pop、空なら停止）
+* 自動遷移：LIVE_PERFORMANCE
+
+#### 6.4.9 LIVE_PERFORMANCE（peek統一・確定）
+
+(1) live:* のカード種別チェック
+
+* live:* のカードのうち、master.card_kind が "ライブ" 以外を控室へ
+
+  * live:* から削除
+  * discard:single に追加
+* 残った live:* はすべてライブカード
+
+(2) bladeCount 計上
+
+* 対象：member:* の縦向き（isUpright=true）のメンバーのみ
+* ブレード枚数：
+
+  * master.blade_count があれば int化して採用
+  * なければ master.blade を int化して採用
+* 合計を bladeCount
+* stats上書き：
+
+  * statsBladeOverrideEnabled=true の場合 bladeCount は statsBladeOverrideValue
+  * statsは常時操作可能で LIVE_PERFORMANCE中でも変更可能
+  * 変更は即座に bladeCount に反映
+
+(3) bladeCount 枚「めくり」候補を pendingItems に移動
+
+* デッキトップ（末尾）から最大 bladeCount 枚を pop（残量まで）
+* pendingItems に順に追加（この時点でデッキから減る）
+* pendingModalOpen=true でエールモーダルを open
+
+(4) drawN 計上
+
+* 対象：pendingItems
+* 各カード master.blade_heart.draw を int化して合計（無ければ0）
+* 合計を drawN とする。drawN が負なら0
+
+(5) drawN 枚の追加ドロー
+
+* drawN 回：
+
+  * デッキトップから1枚→hand（pop）
+  * 空なら停止
+* 自動遷移：LIVE_JUDGE
+
+#### 6.4.10 LIVE_JUDGE（確定）
+
+(1) required 集計
+
+* 対象：live:* のライブカード
+* master.heart[color] を色ごとに int化して required[color]
+
+(2) provided 集計
+
+* 対象：member:* の縦向きメンバーのみ
+* master.heart[color] を色ごとに int化して provided[color]
+
+(3) bladeHearts 集計
+
+* 対象：pendingItems
+* master.blade_heart の各色キーを int化して加算
+* 特殊キー：
+
+  * draw：判定に使わない
+  * all：不足補填用共通ポイントとして別管理
+
+(4) 成否判定
+
+* lack[color] = required[color] - provided[color] - bladeHearts[color]
+* lack<=0 は満たした扱い
+* lack が正の色が残っている場合、all を任意配分して不足を埋める
+* all で全色埋め切れれば成功、埋め切れなければ失敗
+
+(5) 表示
+
+* 成功：message="ライブ成功！"
+* 失敗：message="ライブ失敗"
+* messageTimer は任意（既存仕様に合わせて良い）
+
+(6) 成功ライブの扱い（ゲームルール）
+
+* LIVE_JUDGE 中は自由行動（forbidCardDrag=false）
+* 成功時のみ live:* のライブカードを successLive:single に移動してよい
+* 移動しないまま TURN_END に進めば、残っているliveカードは捨てられる
+* phaseボタンで TURN_END
+
+#### 6.4.11 TURN_END（確定）
+
+* phase=TURN_END
+* 自動処理：
+
+  * live:* に残っている全カードを discard:single へ移動
+  * live:* を空にする
+  * turn を 1 加算
+* 自動遷移：次ターン NORMAL_ACTIVE
+
+### 6.5 forbidCardDrag（phaseRules）（確定）
+
+* true：
+
+  * MULLIGAN
+  * NORMAL_ACTIVE
+  * NORMAL_ENERGY
+  * NORMAL_DRAW
+  * LIVE_SETUP_DONE
+  * LIVE_PERFORMANCE
+  * TURN_END
+* false：
+
+  * NORMAL_MAIN
+  * LIVE_SETUP_IN_PROGRESS
+  * LIVE_JUDGE
+* ただし overlay（resolutionOpen/pendingModalOpen）の制限が優先
+
+---
+
+## 7. 例外系（画像無し、JSON不正、取得失敗、その他）
+
+### 7.1 画像無し / ロード失敗（確定）
+
+* energyカードは画像が存在しない → 簡易表示（例「ENERGY」）
+* 通常カード画像ロード失敗時：
+
+  * プレースホルダー表示
+  * console.warn を出力
+
+### 7.2 import（JSON）例外（確定）
+
+* ファイル選択キャンセル：
+
+  * 何もしない（ログのみ）
+* 失敗（parseエラー等）：
+
+  * console.error
+  * alert
+
+### 7.3 cardMaster 取得と更新（暗号化データ）例外（確定）
+
+#### 7.3.1 初回レンダリング時の更新チェック
+
+* encrypted_data.txt の更新チェック
+* localStorage から cards_etag 取得（無ければ初回）
+* raw URL：
+
+  * `https://raw.githubusercontent.com/ObsidianMatrix/encrypt/main/encrypted_data.txt`
+
+#### 7.3.2 条件付きリクエスト
+
+* cards_etag がある場合 `If-None-Match: <cards_etag>`
+
+#### 7.3.3 更新判定（例外込み）
+
+* 304：
+
+  * 既存 card.json（IndexedDB）使用
+  * 取得/復号/保存はしない
+* 200：
+
+  * 本文取得→復号→IndexedDB置換→ETag更新
+* 4xx/5xx/ネットワークエラー：
+
+  * 既存 card.json 使用
+  * etag更新しない
+* 復号/保存失敗：
+
+  * etag更新しない
+* **初回起動で cardMaster が存在せず、更新取得にも失敗した場合**：
+
+  * 起動不可
+  * エラーを表示して停止する
+
+#### 7.3.4 復号（確定）
+
+* 本文：Base64暗号文
+* Base64→bytes→AES-CBC復号→PKCS#7除去→UTF-8文字列
+* key/iv はコード内ハードコード（秘匿目的ではない）
+* Base64デコードして使用：
+
+  * KEY_B64 = "LhU6ZL5q0X4JlNoRWLsVhYeEdF9E7VDVX7qyIFFewGk="
+  * IV_B64 = "yAlEhcKatLr9Cy1KXhDI5w=="
+* AES-CBC の PKCS#7 除去は WebCrypto に含まれないため自前実装
+
+#### 7.3.5 IndexedDB（確定）
+
+* DB名：lovecard_db
+* version：1
+* objectStore：card_master
+* key：固定キー singleton
+* 保存形式：
+
+  * `{ id: "singleton", cardMasterByNumber: Record<string, CardMaster>, savedAt: number }`
+
+#### 7.3.6 実装注意（例外寄り）
+
+* raw.githubusercontent.com への fetch は CORS 影響を受ける → 失敗時は既存データ使用
+* ETag ヘッダが取得できない場合がある
+
+  * 取得不能時は更新判定を失敗扱い
+  * 警告ログを出して確認
+* ETag方式は未検証 → 取得不能時は警告ログ
+
+### 7.4 デッキ0枚系の安全停止（確定テスト観点）
+
+* デッキ0枚時：
+
+  * ドロー/供給/めくり/pending移動が安全に止まる
+
+### 7.5 Undo / 履歴の例外（確定）
+
+* 履歴は無制限
+* RESET_GAME_FULL / IMPORT_DECK_SUCCESS で全消去
+* Undo 実行時は UI状態を初期化（メニュー/モーダル/confirm/pendingMove/resolutionItems/pendingItems を閉じる）
+
+---
+
+## 付録A：エネルギー仕様（操作章から独立再掲・落とさずまとめ）
+
+* energy は energyStorage:single にカードとして保持、供給元は energyDeck:single、1枚=1コスト
+* 供給タイミング：
+
+  * マリガン確定時：3枚（残量まで、pop）
+  * NORMAL_ENERGY：1枚（残量まで、pop）
+  * energyDeck右クリック：n枚（残量まで、pop）
+* 支払い：
+
+  * 支払いに使った energy は isUpright=false
+  * 横向き energy は当ターン追加支払い不可
+  * 支払い順：UI左から（energyStorage.ids[0] が最左）
+  * 実装上は「先頭側から縦向きを needed 枚選ぶ」でよい
+  * 最終的に「支払った枚数ぶん縦→横」になっていれば正
+* 縦戻し：
+
+  * NORMAL_ACTIVE で energyStorage の energy を全て isUpright=true
+
+---
+
+## 付録B：confirm表示（モーダル禁止）仕様（落とさず再掲）
+
+### costConfirm（不足）
+
+* 発生：手札→member:* 確定前、バトン確定前（neededが必要な場合）
+* 表示：対象member枠内に Yes/No ボタン生成（最前面）
+* 表示中：カードクリック/ドラッグ開始と Yes/No 以外のボタンクリック禁止
+* slot：middle=Yes、bottom=No
+* テキスト：「0コストで出しますか？」
+* Yes：完全0コスト確定、energyタップ無し、pendingMove確定
+* No：pendingMove破棄、状態変更なし
+
+### batonConfirm（禁止条件）
+
+* 禁止条件：playedTurn===turn
+* 表示：対象member枠内に Yes/No ボタン生成（最前面）
+* 表示中：カードクリック/ドラッグ開始と Yes/No 以外のボタンクリック禁止
+* slot：middle=Yes、bottom=No
+* テキスト：「このターンに出たカードですが出しますか？」
+* Yes：続行、No：キャンセル（何も変えない）
+* batonConfirm 表示中は pendingMove が唯一の確定対象
+* Yes/No は pendingMove を確定/破棄するだけでよい
+
+---
+
+## 付録C：既存実装との差異チェック（落とさず再掲）
+
+* zones 型差異：
+
+  * 既存実装に `Record<ZoneKey, CardId[]>` がある可能性
+  * 本仕様は `Record<ZoneKey, ZoneState>`（{ids}）が正
+* resolution 差異：
+
+  * resolution を Zone として扱う実装は採用しない
+  * zones に resolution:* は存在しない
+  * resolution は resolutionItems とモーダルで完結
+* zones型変更の影響チェックリスト：
+
+  * createInitialGameState 初期化
+  * selectors（zones[key].ids 前提）
+  * move/remove/insert 処理
+  * zones[key].length 参照の置換
+  * ドラッグ開始時 fromIndex 決定
+  * ゾーン配列操作は共通関数（insert/remove/move）を通す
+  * SnapEntry 保存/Undo 復元は深いコピー前提
+
+---
+
+## 付録D：Action一覧（最低限）（落とさず再掲）
+
+* IMPORT_DECK_SUCCESS
+* RESET_GAME_FULL
+* PHASE_ADVANCE（または PHASE_STEP_*）
+* CARD_DRAG_START / CARD_DRAG_MOVE / CARD_DRAG_END / CARD_DRAG_CANCEL
+* CARD_TOGGLE_UPRIGHT
+* OPEN_STATS_MODAL / CLOSE_STATS_MODAL
+* OPEN_SEARCH_MODAL / CLOSE_SEARCH_MODAL
+* OPEN_DETAIL_MODAL / CLOSE_DETAIL_MODAL
+* OPEN_RESOLUTION_MODAL / CLOSE_RESOLUTION_MODAL
+* OPEN_PENDING_MODAL / CLOSE_PENDING_MODAL
+* OPEN_WAITING_MODAL / CLOSE_WAITING_MODAL
+* UPDATE_DECK_MENU_COUNT / UPDATE_ENERGY_MENU_COUNT
+* RESOLUTION_OPEN_WITH_ITEMS / RESOLUTION_REMOVE_ITEM / RESOLUTION_CLEAR
+* COST_CONFIRM_SET / COST_CONFIRM_YES / COST_CONFIRM_NO
+* BATON_CONFIRM_SET / BATON_CONFIRM_YES / BATON_CONFIRM_NO
+* SNAP_PUSH / UNDO
+
+---
+
+## 付録E：必須テスト観点（落とさず再掲）
+
+* デッキ0枚時：ドロー/供給/めくり/pending移動が安全に止まる
+* resolution peek：移動確定時のみ sourceZone から消える
+* cost不足 Yes：エネルギーが一切横向きにならない
+* バトン差分：old>new の時 needed=0（エネルギー不要）
+* LIVE_PERFORMANCE：stats 上書きを触ると bladeCount が即反映され、pending枚数が変わる
+* TURN_END：live 残りが必ず discard へ移動する
+
+---
+
+## 付録F：最終宣言（落とさず再掲）
+
+* stats は別ウィンドウではなくモーダルで統一
+* stats は常時操作可能で、他の制限を受けない
+* back(undo)は snapHistory による完全巻き戻し（無制限）
+* ゾーンキーは kind:slot 形式（resolutionは含まない）
+* energyStorage がエネルギー置き場
+* energy供給は「マリガン確定時3枚」「NORMAL_ENERGYで1枚」「右クリックでn枚」
+* コスト不足Yesは「完全0コスト（タップ無し）」
+* バトンは差分コスト
+* バトン確定で既存カードは discard へ送ってから新カードを置く
+* right click：向き変更、ただし deck/energyDeck はメニュー
+* 右クリックは contextmenu の既定動作を preventDefault して処理する
+* 詳細：虫眼鏡左クリック
+* deck右クリックメニューは上からn枚/サーチ/nドロー/n増減のみ
+* bottom系、裏面画像は採用しない
+* memberも NORMAL_ACTIVE で縦戻し
+
+---
